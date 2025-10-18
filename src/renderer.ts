@@ -29,10 +29,13 @@
 import './index.css';
 import { createApp } from 'vue';
 import App from './App.vue';
+import pinia from './store';
 
 console.log(
   '👋 This message is being logged by "renderer.ts", included via Vite',
 );
 
 // 创建并挂载 Vue 应用
-createApp(App).mount('#app');
+const app = createApp(App);
+app.use(pinia);
+app.mount('#app');

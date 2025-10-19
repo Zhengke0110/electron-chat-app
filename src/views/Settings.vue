@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full overflow-y-auto p-6">
+    <div class="h-full overflow-y-auto p-6 bg-gray-50">
         <div class="max-w-2xl mx-auto">
             <h2 class="text-2xl font-bold text-gray-800 mb-6">设置</h2>
 
@@ -11,5 +11,5 @@
 </template>
 
 <script setup lang="ts">
-// 在此编写设置逻辑
+// 设置页面逻辑
 </script>

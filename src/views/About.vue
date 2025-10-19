@@ -1,5 +1,5 @@
 <template>
-    <div class="h-full overflow-y-auto p-6">
+    <div class="h-full overflow-y-auto p-6 bg-gray-50">
         <div class="max-w-2xl mx-auto">
             <div class="bg-white rounded shadow p-8 text-center">
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">关于</h2>
@@ -11,5 +11,5 @@
 </template>
 
 <script setup lang="ts">
-// 在此编写关于页面逻辑
+// 关于页面逻辑
 </script>

@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.18",
+    "dexie": "^4.2.1",
     "electron-squirrel-startup": "^1.0.1",
     "pinia": "^3.0.3",
     "reka-ui": "^2.5.1",

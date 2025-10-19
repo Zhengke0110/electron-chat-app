@@ -37,8 +37,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import ConversationList from './components/ConversationList';
-import type { ConversationProps } from './types';
+import ConversationList, { type ConversationProps } from './components/ConversationList';
 
 const router = useRouter();
 

@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import dayjs from 'dayjs';
-import type { ConversationProps } from '@/types';
+import type { ConversationProps } from './types';
 
 defineProps<{
     items: ConversationProps[];

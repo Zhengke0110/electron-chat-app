@@ -33,34 +33,41 @@
 
                             <!-- 模型类型标签 -->
                             <span :class="[
-                                'px-2 py-0.5 text-xs font-medium rounded',
-                                config.modelType === 'chat'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-purple-100 text-purple-700'
+                                'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded',
+                                {
+                                    'bg-blue-100 text-blue-700': getModelTypeConfig(config.modelType).color === 'blue',
+                                    'bg-purple-100 text-purple-700': getModelTypeConfig(config.modelType).color === 'purple',
+                                    'bg-green-100 text-green-700': getModelTypeConfig(config.modelType).color === 'green',
+                                    'bg-gray-100 text-gray-700': getModelTypeConfig(config.modelType).color === 'gray'
+                                }
                             ]">
-                                {{ config.modelType === 'chat' ? '💬 对话' : '👁️ 视觉' }}
+                                <Icon :icon="getModelTypeConfig(config.modelType).icon" class="text-sm" />
+                                {{ getModelTypeConfig(config.modelType).label }}
                             </span>
 
                             <!-- 默认标签 -->
                             <span v-if="config.isDefault"
-                                class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
-                                ⭐ 默认
+                                class="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                                <Icon icon="mdi:star" class="text-sm" />
+                                默认
                             </span>
 
                             <!-- 激活状态 -->
                             <span :class="config.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'"
-                                class="px-2 py-0.5 text-xs font-medium rounded">
-                                {{ config.isActive ? '✅ 已启用' : '⏸️ 未启用' }}
+                                class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded">
+                                <Icon :icon="config.isActive ? 'mdi:check-circle' : 'mdi:pause-circle'"
+                                    class="text-sm" />
+                                {{ config.isActive ? '已启用' : '未启用' }}
                             </span>
 
                             <!-- 测试状态 -->
-                            <span v-if="config.testStatus === 'testing'"
-                                class="text-blue-600 text-lg animate-spin inline-block" title="测试中">⏳</span>
-                            <span v-else-if="config.testStatus === 'success'" class="text-green-600 text-lg"
-                                title="测试成功">✅</span>
-                            <span v-else-if="config.testStatus === 'failed'" class="text-red-600 text-lg"
-                                title="测试失败">❌</span>
-                            <span v-else class="text-gray-400 text-lg" title="未测试">⚪</span>
+                            <Icon v-if="config.testStatus === 'testing'" icon="mdi:loading"
+                                class="text-blue-600 text-lg animate-spin" title="测试中" />
+                            <Icon v-else-if="config.testStatus === 'success'" icon="mdi:check-circle"
+                                class="text-green-600 text-lg" title="测试成功" />
+                            <Icon v-else-if="config.testStatus === 'failed'" icon="mdi:close-circle"
+                                class="text-red-600 text-lg" title="测试失败" />
+                            <Icon v-else icon="mdi:help-circle-outline" class="text-gray-400 text-lg" title="未测试" />
                         </div>
 
                         <!-- 配置详情 -->
@@ -90,8 +97,9 @@
                     <div class="ml-4">
                         <DropdownMenuRoot>
                             <DropdownMenuTrigger
-                                class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
-                                ⚙️ 操作
+                                class="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                                <Icon icon="mdi:cog" class="text-lg" />
+                                操作
                             </DropdownMenuTrigger>
 
                             <DropdownMenuPortal>
@@ -100,32 +108,38 @@
                                     :side-offset="5">
                                     <DropdownMenuItem @select="$emit('test', config)"
                                         class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded cursor-pointer outline-none">
-                                        🔍 测试连接
+                                        <Icon icon="mdi:test-tube" class="text-base" />
+                                        测试连接
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem @select="$emit('edit', config)"
                                         class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer outline-none">
-                                        ✏️ 编辑配置
+                                        <Icon icon="mdi:pencil" class="text-base" />
+                                        编辑配置
                                     </DropdownMenuItem>
 
                                     <DropdownMenuSeparator class="h-px bg-gray-200 my-1" />
 
                                     <DropdownMenuItem v-if="config.id" @select="$emit('toggleActive', config.id)"
                                         class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer outline-none">
-                                        {{ config.isActive ? '🚫 禁用' : '✅启用' }}
+                                        <Icon :icon="config.isActive ? 'mdi:cancel' : 'mdi:check-circle'"
+                                            class="text-base" />
+                                        {{ config.isActive ? '禁用' : '启用' }}
                                     </DropdownMenuItem>
 
                                     <DropdownMenuItem v-if="!config.isDefault && config.id"
                                         @select="$emit('setDefault', config.id)"
                                         class="flex items-center gap-2 px-3 py-2 text-sm text-yellow-700 hover:bg-yellow-50 rounded cursor-pointer outline-none">
-                                        ⭐ 设为默认
+                                        <Icon icon="mdi:star" class="text-base" />
+                                        设为默认
                                     </DropdownMenuItem>
 
                                     <DropdownMenuSeparator v-if="config.id" class="h-px bg-gray-200 my-1" />
 
                                     <DropdownMenuItem v-if="config.id" @select="handleDelete(config)"
                                         class="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded cursor-pointer outline-none">
-                                        🗑️ 删除
+                                        <Icon icon="mdi:delete" class="text-base" />
+                                        删除
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenuPortal>
@@ -138,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue';
 import {
     DropdownMenuRoot,
     DropdownMenuTrigger,
@@ -148,6 +163,16 @@ import {
 } from 'reka-ui';
 import type { ModelConfigListProps, ModelConfigListEmits } from './types';
 import type { ModelConfig } from '@/types';
+
+// 获取模型类型标签配置
+const getModelTypeConfig = (modelType: string) => {
+    const configs = {
+        'chat': { icon: 'mdi:message-text', label: '对话', color: 'blue' },
+        'vision': { icon: 'mdi:eye', label: '视觉', color: 'purple' },
+        'speech': { icon: 'mdi:microphone', label: '语音', color: 'green' }
+    };
+    return configs[modelType as keyof typeof configs] || { icon: 'mdi:robot', label: '未知', color: 'gray' };
+};
 
 defineProps<ModelConfigListProps>();
 const emit = defineEmits<ModelConfigListEmits>();

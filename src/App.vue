@@ -38,6 +38,9 @@
             <RouterView />
         </div>
 
+        <!-- Toast 通知 -->
+        <Toast />
+
         <!-- 删除确认对话框 -->
         <AlertDialogRoot v-model:open="deleteDialogOpen">
             <AlertDialogPortal>
@@ -85,6 +88,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import ConversationList from './components/ConversationList';
+import Toast from './components/Toast/Toast.vue';
 import {
     AlertDialogRoot,
     AlertDialogPortal,

@@ -37,7 +37,7 @@ import type { ProviderTemplate } from '@/types';
 
 interface ProviderSectionProps {
     modelValue: {
-        modelType: 'chat' | 'vision';
+        modelType: 'chat' | 'vision' | 'speech';
         provider: string;
         baseUrl: string;
     };

@@ -1,5 +1,5 @@
 // 模型类型
-export type ModelType = 'chat' | 'vision';
+export type ModelType = 'chat' | 'vision' | 'speech';
 
 // 图片附件接口
 export interface ImageAttachment {
@@ -18,7 +18,7 @@ export interface ImageAttachment {
 export interface ModelConfig {
     id?: number;
     name: string;                  // 配置名称 (用户自定义，如 "我的 DeepSeek")
-    modelType: ModelType;          // 模型类型 (chat: 对话模型, vision: 视觉模型)
+    modelType: ModelType;          // 模型类型 (chat: 对话模型, vision: 视觉模型, speech: 语音模型)
     provider: string;              // 厂商标识 (deepseek, openai, anthropic, qwen, custom)
     baseUrl: string;               // API 接口路径
     model: string;                 // 模型类型/名称

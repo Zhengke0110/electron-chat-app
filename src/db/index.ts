@@ -121,11 +121,13 @@ export const dbHelpers = {
     },
 
     async getActiveModelConfigs() {
-        return await db.modelConfigs.where('isActive').equals(1).toArray();
+        const allConfigs = await db.modelConfigs.toArray();
+        return allConfigs.filter(c => c.isActive === true);
     },
 
     async getDefaultModelConfig() {
-        return await db.modelConfigs.where('isDefault').equals(1).first();
+        const allConfigs = await db.modelConfigs.toArray();
+        return allConfigs.find(c => c.isDefault === true);
     },
 
     async getModelConfig(id: number) {

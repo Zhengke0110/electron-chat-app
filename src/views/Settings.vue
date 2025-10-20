@@ -87,8 +87,6 @@ const handleDeleteConfig = async (id: number) => {
 };
 
 const handleTestConfig = async (config: ModelConfig) => {
-    console.log('正在测试模型配置:', config);
-
     // 设置为测试中状态
     if (config.id) {
         await dbStore.updateModelConfig(config.id, {

@@ -11,16 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
-
-// 调试信息
-onMounted(() => {
-    console.log('=== About 页面已加载 ===');
-    console.log('当前路由路径:', route.path);
-    console.log('当前路由名称:', route.name);
-    console.log('路由完整信息:', route);
-});
 </script>

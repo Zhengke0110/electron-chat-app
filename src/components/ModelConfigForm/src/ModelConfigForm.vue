@@ -240,10 +240,11 @@ const handleSubmit = () => {
             updatedAt: now
         });
     } else {
-        // 新建模式
+        // 新建模式 - 保留测试结果
         emit('save', {
             ...formData.value,
-            testStatus: 'untested',
+            testStatus: testResult.value ? (testResult.value.success ? 'success' : 'failed') : 'untested',
+            testMessage: testResult.value ? testResult.value.message : undefined,
             createdAt: now,
             updatedAt: now
         });

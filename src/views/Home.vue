@@ -26,28 +26,27 @@ const route = useRoute();
 const dbStore = useDbStore();
 const userQuestion = ref('');
 
-// 调试信息
-onMounted(() => {
-    console.log('=== Home 页面已加载 ===');
-    console.log('当前路由路径:', route.path);
-    console.log('当前路由名称:', route.name);
-    console.log('路由完整信息:', route);
-});
-
 const handleCreateConversation = async (message: string) => {
-    console.log('=== 开始创建会话 ===');
-    console.log('用户输入:', message);
     try {
+        // 获取默认模型配置
+        const defaultModel = await dbStore.getDefaultModelConfig();
+
+        if (!defaultModel) {
+            alert('⚠️ 未找到默认模型配置，请先在设置中配置模型');
+            router.push('/settings');
+            return;
+        }
+
         // 1. 创建新会话
         const now = new Date().toISOString();
+        const modelDisplayName = `${defaultModel.name} (${defaultModel.provider})`;
         const conversationId = await dbStore.createConversation({
-            title: message.slice(0, 30) + (message.length > 30 ? '...' : ''), // 使用问题前30个字符作为标题
-            selectedModel: 'gpt-4', // 默认模型
+            title: message.slice(0, 30) + (message.length > 30 ? '...' : ''),
+            selectedModel: modelDisplayName,
             createdAt: now,
             updatedAt: now,
-            providerId: 1 // 默认 OpenAI
+            providerId: defaultModel.id
         });
-        console.log('✓ 会话创建成功, ID:', conversationId);
 
         // 2. 创建用户消息（question 类型）
         await dbStore.addMessage({
@@ -58,20 +57,14 @@ const handleCreateConversation = async (message: string) => {
             status: 'success',
             createdAt: now
         });
-        console.log('✓ 用户消息创建成功');
 
         // 3. 跳转到会话页面，携带 query 参数
-        const targetPath = `/chat/${conversationId}`;
-        console.log('准备跳转到:', targetPath);
-        console.log('携带 query 参数:', { q: message });
-        
         router.push({
-            path: targetPath,
+            path: `/chat/${conversationId}`,
             query: { q: message }
         });
-        console.log('✓ 路由跳转已执行');
     } catch (error) {
-        console.error('❌ 创建会话失败:', error);
+        console.error('[创建会话] 失败:', error);
         alert('创建会话失败，请重试');
     }
 };

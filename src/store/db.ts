@@ -120,7 +120,7 @@ export const useDbStore = defineStore('db', () => {
 
     // 初始化
     const initialize = async () => {
-        await dbHelpers.initializeDefaultData();
+        // await dbHelpers.initializeDefaultData();
         await loadConversations();
         await loadProviders();
         await loadModelConfigs();

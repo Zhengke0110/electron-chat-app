@@ -123,6 +123,73 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
             temperature: 0.7,
             maxTokens: 2000
         }
+    },
+
+    // ========== 语音模型 ==========
+    {
+        provider: 'openai-whisper',
+        name: 'OpenAI Whisper',
+        modelType: 'speech',
+        baseUrl: 'https://api.openai.com/v1',
+        models: ['whisper-1'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=whisper',
+        description: 'OpenAI Whisper 语音识别模型，支持多语言转录',
+        defaultParams: {
+            temperature: 0.0,
+            maxTokens: 0
+        }
+    },
+    {
+        provider: 'azure-speech',
+        name: 'Azure Speech',
+        modelType: 'speech',
+        baseUrl: 'https://<region>.api.cognitive.microsoft.com/speechtotext/v3.0',
+        models: ['zh-CN-Standard', 'en-US-Standard', 'ja-JP-Standard'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=azure-speech',
+        description: 'Azure 认知服务语音识别，支持实时转录',
+        defaultParams: {
+            temperature: 0.0,
+            maxTokens: 0
+        }
+    },
+    {
+        provider: 'deepgram',
+        name: 'Deepgram',
+        modelType: 'speech',
+        baseUrl: 'https://api.deepgram.com/v1',
+        models: ['nova-2', 'enhanced', 'base'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=deepgram',
+        description: 'Deepgram 语音识别 API，高精度实时转录',
+        defaultParams: {
+            temperature: 0.0,
+            maxTokens: 0
+        }
+    },
+    {
+        provider: 'assemblyai',
+        name: 'AssemblyAI',
+        modelType: 'speech',
+        baseUrl: 'https://api.assemblyai.com/v2',
+        models: ['best', 'nano'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=assemblyai',
+        description: 'AssemblyAI 语音识别，支持说话人识别和摘要',
+        defaultParams: {
+            temperature: 0.0,
+            maxTokens: 0
+        }
+    },
+    {
+        provider: 'custom-speech',
+        name: '自定义语音模型',
+        modelType: 'speech',
+        baseUrl: '',
+        models: [],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=custom-speech',
+        description: '自定义兼容 Whisper API 的语音识别接口',
+        defaultParams: {
+            temperature: 0.0,
+            maxTokens: 0
+        }
     }
 ];
 
@@ -187,6 +254,6 @@ export function createConfigFromTemplate(
 /**
  * 根据模型类型获取所有模板
  */
-export function getProviderTemplatesByType(modelType: 'chat' | 'vision'): ProviderTemplate[] {
+export function getProviderTemplatesByType(modelType: 'chat' | 'vision' | 'speech'): ProviderTemplate[] {
     return PROVIDER_TEMPLATES.filter(t => t.modelType === modelType);
 }

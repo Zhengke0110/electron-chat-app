@@ -1,8 +1,13 @@
 <template>
     <div class="space-y-4">
         <div class="flex items-center justify-between border-b pb-2">
-            <h3 class="text-sm font-semibold text-gray-700">⚙️ 高级参数</h3>
-            <button @click="isExpanded = !isExpanded" type="button" class="text-xs text-blue-600 hover:text-blue-700">
+            <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Icon icon="mdi:cog" class="text-lg" />
+                高级参数
+            </h3>
+            <button @click="isExpanded = !isExpanded" type="button"
+                class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                <Icon :icon="isExpanded ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="text-base" />
                 {{ isExpanded ? '收起' : '展开' }}
             </button>
         </div>
@@ -53,6 +58,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { Icon } from '@iconify/vue';
 import {
     CollapsibleRoot,
     CollapsibleContent,

@@ -1,6 +1,9 @@
 <template>
     <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2">🤖 模型配置</h3>
+        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2 flex items-center gap-2">
+            <Icon icon="mdi:robot" class="text-lg" />
+            模型配置
+        </h3>
 
         <div class="space-y-2">
             <label class="block text-sm font-medium text-gray-700">
@@ -20,6 +23,8 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue';
+
 interface ModelSectionProps {
     modelValue: {
         model: string;

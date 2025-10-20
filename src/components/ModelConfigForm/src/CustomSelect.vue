@@ -6,10 +6,8 @@
             <span class="text-sm text-gray-900">
                 {{ displayText }}
             </span>
-            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': isOpen }" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
+            <Icon icon="mdi:chevron-down" class="text-lg text-gray-400 transition-transform"
+                :class="{ 'rotate-180': isOpen }" />
         </button>
 
         <!-- 下拉菜单 -->
@@ -27,12 +25,7 @@
                             'text-gray-700': option.value !== modelValue
                         }">
                         <span>{{ option.label }}</span>
-                        <svg v-if="option.value === modelValue" class="w-4 h-4 text-blue-600" fill="currentColor"
-                            viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clip-rule="evenodd" />
-                        </svg>
+                        <Icon v-if="option.value === modelValue" icon="mdi:check" class="text-lg text-blue-600" />
                     </button>
                 </div>
             </div>
@@ -42,6 +35,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Icon } from '@iconify/vue';
 
 export interface SelectOption {
     label: string;

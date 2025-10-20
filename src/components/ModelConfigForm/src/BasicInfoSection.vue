@@ -1,6 +1,9 @@
 <template>
     <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2">📝 基础信息</h3>
+        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2 flex items-center gap-2">
+            <Icon icon="mdi:file-document-outline" class="text-lg" />
+            基础信息
+        </h3>
 
         <!-- 配置名称 -->
         <div class="space-y-2">
@@ -45,6 +48,8 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue';
+
 interface BasicInfoProps {
     modelValue: {
         name: string;

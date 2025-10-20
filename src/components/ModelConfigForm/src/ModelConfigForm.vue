@@ -11,10 +11,7 @@
                             {{ isEditMode ? '编辑模型配置' : '添加模型配置' }}
                         </DialogTitle>
                         <DialogClose class="text-gray-400 hover:text-gray-600 transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <Icon icon="mdi:close" class="text-2xl" />
                         </DialogClose>
                     </div>
 
@@ -30,15 +27,18 @@
                             <label class="block text-sm font-medium text-gray-700">
                                 模型类型 <span class="text-red-500">*</span>
                             </label>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-3 gap-3">
                                 <button type="button" @click="handleModelTypeChange('chat')" :class="[
                                     'px-4 py-3 border-2 rounded-lg text-left transition-all',
                                     formData.modelType === 'chat'
                                         ? 'border-blue-500 bg-blue-50 text-blue-700'
                                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                 ]">
-                                    <div class="font-semibold">💬 对话模型</div>
-                                    <div class="text-xs mt-1 opacity-75">用于文本对话和推理</div>
+                                    <div class="font-semibold flex items-center gap-2">
+                                        <Icon icon="mdi:message-text" class="text-lg" />
+                                        对话模型
+                                    </div>
+                                    <div class="text-xs mt-1 opacity-75">文本对话和推理</div>
                                 </button>
                                 <button type="button" @click="handleModelTypeChange('vision')" :class="[
                                     'px-4 py-3 border-2 rounded-lg text-left transition-all',
@@ -46,8 +46,23 @@
                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
                                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                                 ]">
-                                    <div class="font-semibold">👁️ 视觉模型</div>
-                                    <div class="text-xs mt-1 opacity-75">用于图片识别和分析</div>
+                                    <div class="font-semibold flex items-center gap-2">
+                                        <Icon icon="mdi:eye" class="text-lg" />
+                                        视觉模型
+                                    </div>
+                                    <div class="text-xs mt-1 opacity-75">图片识别和分析</div>
+                                </button>
+                                <button type="button" @click="handleModelTypeChange('speech')" :class="[
+                                    'px-4 py-3 border-2 rounded-lg text-left transition-all',
+                                    formData.modelType === 'speech'
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                ]">
+                                    <div class="font-semibold flex items-center gap-2">
+                                        <Icon icon="mdi:microphone" class="text-lg" />
+                                        语音模型
+                                    </div>
+                                    <div class="text-xs mt-1 opacity-75">语音识别转文字</div>
                                 </button>
                             </div>
                         </div>
@@ -73,8 +88,8 @@
                             <!-- 左侧测试按钮 -->
                             <button type="button" @click="handleTest" :disabled="!isTestable || isTesting"
                                 class="px-4 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-2">
-                                <span v-if="isTesting">⏳</span>
-                                <span v-else>🔍</span>
+                                <Icon v-if="isTesting" icon="mdi:loading" class="animate-spin text-lg" />
+                                <Icon v-else icon="mdi:test-tube" class="text-lg" />
                                 {{ isTesting ? '测试中...' : '测试连接' }}
                             </button>
 
@@ -93,15 +108,27 @@
 
                         <!-- 测试结果提示 -->
                         <div v-if="testResult" :class="[
-                            'p-3 rounded-lg text-sm flex items-start gap-2',
+                            'p-4 rounded-lg text-sm flex items-start gap-3',
                             testResult.success
                                 ? 'bg-green-50 text-green-800 border border-green-200'
                                 : 'bg-red-50 text-red-800 border border-red-200'
                         ]">
-                            <span class="text-lg">{{ testResult.success ? '✅' : '❌' }}</span>
-                            <div class="flex-1">
-                                <p class="font-medium">{{ testResult.success ? '连接成功' : '连接失败' }}</p>
-                                <p class="text-xs mt-1 opacity-90">{{ testResult.message }}</p>
+                            <Icon :icon="testResult.success ? 'mdi:check-circle' : 'mdi:alert-circle'"
+                                class="text-xl flex-shrink-0 mt-0.5" />
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline justify-between gap-2 mb-1">
+                                    <p class="font-semibold">
+                                        {{ testResult.success ? '连接成功' : '连接失败' }}
+                                    </p>
+                                    <span v-if="testResult.success && testResult.responseTime"
+                                        class="text-xs font-medium opacity-75 whitespace-nowrap">
+                                        {{ testResult.responseTime }}ms
+                                    </span>
+                                </div>
+                                <p v-if="testResult.error || testResult.message"
+                                    class="text-xs opacity-90 leading-relaxed">
+                                    {{ testResult.error || testResult.message }}
+                                </p>
                             </div>
                         </div>
                     </form>
@@ -122,12 +149,14 @@ import {
     DialogDescription,
     DialogClose
 } from 'reka-ui';
+import { Icon } from '@iconify/vue';
 import BasicInfoSection from './BasicInfoSection.vue';
 import ProviderSection from './ProviderSection.vue';
 import ModelSection from './ModelSection.vue';
 import AdvancedSection from './AdvancedSection.vue';
 import { PROVIDER_TEMPLATES, getProviderTemplatesByType } from '@/constants/providers';
 import { useModelConfigTest } from '@/composables/useModelConfigTest';
+import { useToast } from '@/composables';
 import type { ModelConfigFormProps, ModelConfigFormEmits, FormData } from './types';
 import type { ProviderTemplate } from '@/types';
 
@@ -142,6 +171,9 @@ const {
     isTestable: isConfigTestable,
     clearTestResult
 } = useModelConfigTest();
+
+// 使用 Toast
+const toast = useToast();
 
 // 是否编辑模式
 const isEditMode = computed(() => !!props.modelValue?.id);
@@ -217,7 +249,7 @@ watch(() => props.isOpen, (isOpen) => {
 });
 
 // 模型类型切换
-const handleModelTypeChange = (type: 'chat' | 'vision') => {
+const handleModelTypeChange = (type: 'chat' | 'vision' | 'speech') => {
     if (formData.value.modelType === type) return;
 
     formData.value.modelType = type;
@@ -264,6 +296,21 @@ const handleTest = async () => {
 
     // 调用 composable 的测试方法
     const result = await testConnection(formData.value);
+
+    // 显示测试结果 Toast
+    if (result.success) {
+        toast.success(
+            `连接成功！响应时间: ${result.responseTime}ms`,
+            '测试成功',
+            3000
+        );
+    } else {
+        toast.error(
+            result.error || result.message,
+            '测试失败',
+            5000
+        );
+    }
 
     // 如果是编辑模式且有 id,同步测试结果到数据库
     if (isEditMode.value && props.modelValue?.id) {

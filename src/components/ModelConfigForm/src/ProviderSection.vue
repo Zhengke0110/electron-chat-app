@@ -1,6 +1,9 @@
 <template>
     <div class="space-y-4">
-        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2">🏢 厂商选择</h3>
+        <h3 class="text-sm font-semibold text-gray-700 border-b pb-2 flex items-center gap-2">
+            <Icon icon="mdi:office-building" class="text-lg" />
+            厂商选择
+        </h3>
 
         <div class="space-y-2">
             <label class="block text-sm font-medium text-gray-700">
@@ -31,6 +34,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Icon } from '@iconify/vue';
 import CustomSelect, { type SelectOption } from './CustomSelect.vue';
 import { PROVIDER_TEMPLATES } from '@/constants/providers';
 import type { ProviderTemplate } from '@/types';

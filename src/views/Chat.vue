@@ -53,6 +53,7 @@ import { storeToRefs } from 'pinia';
 import MessageInput from '@/components/MessageInput';
 import ModelSelector from '@/components/ModelSelector';
 import { useDbStore } from '@/store/db';
+import { useAIStream } from '@/composables';
 import type { Message } from '@/db';
 import type { ModelConfig } from '@/types';
 
@@ -60,11 +61,13 @@ const route = useRoute();
 const router = useRouter();
 const dbStore = useDbStore();
 
+// 使用 AI Stream composable
+const { isStreaming, sendStreamMessage, cancelStream } = useAIStream();
+
 const conversationId = ref<number | null>(null);
 const userInput = ref('');
 const messages = ref<Message[]>([]);
 const selectedModelId = ref<number | undefined>(undefined);
-const isStreaming = ref(false); // 标记是否正在流式输出
 const messagesContainer = ref<HTMLElement | null>(null); // 消息容器引用
 
 // 从 store 获取模型配置
@@ -164,7 +167,6 @@ const generateAIResponse = async (userMessage: string) => {
         status: 'loading',
         createdAt: now
     });
-    console.log('[AI] 创建 Loading 消息, ID:', answerId);
 
     // 重新加载消息列表，获取新创建的消息
     messages.value = await dbStore.getMessagesByConversation(conversationId.value);
@@ -173,19 +175,14 @@ const generateAIResponse = async (userMessage: string) => {
     const streamingMessage = messages.value.find(m => m.id === answerId);
 
     if (!streamingMessage) {
-        console.error('[AI] 未找到创建的消息');
+        console.error('未找到创建的消息');
         return;
     }
 
-    // 标记开始流式输出
-    isStreaming.value = true;    // 滚动到底部
+    // 滚动到底部
     scrollToBottomSmooth();
 
     try {
-        // 导入 AI 服务
-        const { createAIService } = await import('@/services');
-        const aiService = createAIService(modelConfig);
-
         // 准备消息历史
         const aiMessages = messages.value
             .filter(m => m.id !== answerId && m.status === 'success')
@@ -194,66 +191,84 @@ const generateAIResponse = async (userMessage: string) => {
                 content: m.content
             }));
 
-        console.log('[AI] 开始调用 API, 模型:', modelConfig.model);
-
-        let fullContent = '';
         let updateCounter = 0;
         const UPDATE_INTERVAL = 10; // 每10个chunk更新一次数据库
 
-        // 使用流式响应
-        for await (const chunk of aiService.chatStream({ messages: aiMessages, stream: true })) {
-            if (!chunk.done && chunk.content) {
-                fullContent += chunk.content;
-                updateCounter++;
+        // 使用 IPC 流式响应
+        await sendStreamMessage(
+            conversationId.value,
+            answerId as number,
+            modelConfig,
+            aiMessages,
+            {
+                // 每次接收到新内容
+                onChunk: (content, fullContent) => {
+                    updateCounter++;
 
-                // 🎯 直接修改消息对象的属性，Vue 3 会自动追踪
-                streamingMessage.content = fullContent;
-                streamingMessage.updatedAt = new Date().toISOString();
+                    // 🎯 直接修改消息对象的属性，Vue 3 会自动追踪
+                    streamingMessage.content = fullContent;
+                    streamingMessage.updatedAt = new Date().toISOString();
 
-                // 每次内容更新时滚动到底部
-                scrollToBottom();
+                    // 每次内容更新时滚动到底部
+                    scrollToBottom();
 
-                // 定期更新数据库（减少频繁写入）
-                if (updateCounter % UPDATE_INTERVAL === 0) {
+                    // 定期更新数据库（减少频繁写入）
+                    if (updateCounter % UPDATE_INTERVAL === 0) {
+                        dbStore.updateMessage(answerId as number, {
+                            content: fullContent,
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                },
+
+                // 流式完成
+                onDone: async ({ finishReason, totalTokens }) => {
+                    console.log('[AI] 流式输出完成, 总字符数:', streamingMessage.content.length);
+
+                    // 最终更新：标记为成功并保存完整内容到数据库
+                    streamingMessage.status = 'success';
+                    streamingMessage.updatedAt = new Date().toISOString();
+
                     await dbStore.updateMessage(answerId as number, {
-                        content: fullContent,
+                        content: streamingMessage.content,
+                        status: 'success',
                         updatedAt: new Date().toISOString()
                     });
-                }
+                },
+
+                // 发生错误
+                onError: async ({ message: errorMessage, code }) => {
+                    console.error('[AI] 回答生成失败:', errorMessage);
+
+                    const errorText = `生成回答失败: ${errorMessage}`;
+
+                    // 更新本地消息显示错误
+                    streamingMessage.content = errorText;
+                    streamingMessage.status = 'error';
+                    streamingMessage.updatedAt = new Date().toISOString();
+
+                    // 标记为失败
+                    await dbStore.updateMessage(answerId as number, {
+                        content: errorText,
+                        status: 'error',
+                        updatedAt: new Date().toISOString()
+                    });
+                },
             }
-        }
-
-        console.log('[AI] 流式输出完成, 总字符数:', fullContent.length);
-
-        // 最终更新：标记为成功并保存完整内容到数据库
-        streamingMessage.content = fullContent;
-        streamingMessage.status = 'success';
-        streamingMessage.updatedAt = new Date().toISOString();
-
-        await dbStore.updateMessage(answerId as number, {
-            content: fullContent,
-            status: 'success',
-            updatedAt: new Date().toISOString()
-        });
-
-        // 结束流式输出
-        isStreaming.value = false;
-
-        console.log('[AI] 回答生成成功');
+        );
     } catch (error) {
-        console.error('[AI] 回答生成失败:', error);
+        console.error('[AI] 发送消息异常:', error);
 
-        // 结束流式输出
-        isStreaming.value = false;
+        const errorText = `发送消息失败: ${error instanceof Error ? error.message : String(error)}`;
 
         // 更新本地消息显示错误
-        streamingMessage.content = `生成回答失败: ${error instanceof Error ? error.message : String(error)}`;
+        streamingMessage.content = errorText;
         streamingMessage.status = 'error';
         streamingMessage.updatedAt = new Date().toISOString();
 
         // 标记为失败
         await dbStore.updateMessage(answerId as number, {
-            content: `生成回答失败: ${error instanceof Error ? error.message : String(error)}`,
+            content: errorText,
             status: 'error',
             updatedAt: new Date().toISOString()
         });

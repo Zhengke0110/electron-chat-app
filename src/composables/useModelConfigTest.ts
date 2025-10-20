@@ -1,12 +1,22 @@
 import { ref, computed } from 'vue';
-import { modelConfigService, type TestConnectionResult } from '../services/modelConfigService';
+import { useAIStream } from './useAIStream';
 import type { ModelConfig } from '@/types';
+
+interface TestConnectionResult {
+    success: boolean;
+    message: string;
+    responseTime?: number;
+    error?: string;
+}
 
 /**
  * 模型配置测试 Composable
- * 统一管理测试连接的状态和逻辑
+ * 统一管理测试连接的状态和逻辑，使用 IPC 架构
  */
 export function useModelConfigTest() {
+    // 使用 AI Stream composable
+    const { testConnection: testConnectionIPC } = useAIStream();
+
     // 测试状态
     const isTesting = ref(false);
     const testResult = ref<TestConnectionResult | null>(null);
@@ -55,10 +65,14 @@ export function useModelConfigTest() {
         testResult.value = null;
 
         try {
-            // 调用 Service 层执行测试
-            const result = await modelConfigService.testConnection(config);
-            testResult.value = result;
-            return result;
+            // 使用 IPC 测试连接
+            return await new Promise<TestConnectionResult>((resolve) => {
+                testConnectionIPC(config as ModelConfig, (result) => {
+                    testResult.value = result;
+                    isTesting.value = false;
+                    resolve(result);
+                });
+            });
         } catch (error) {
             const errorResult: TestConnectionResult = {
                 success: false,
@@ -66,9 +80,8 @@ export function useModelConfigTest() {
                 error: error instanceof Error ? error.message : String(error)
             };
             testResult.value = errorResult;
-            return errorResult;
-        } finally {
             isTesting.value = false;
+            return errorResult;
         }
     };
 
@@ -92,7 +105,15 @@ export function useModelConfigTest() {
      */
     const getFormattedMessage = (): string => {
         if (!testResult.value) return '';
-        return modelConfigService.formatTestResultMessage(testResult.value);
+
+        const { success, message, responseTime, error } = testResult.value;
+
+        if (success) {
+            const timeInfo = responseTime ? ` (${responseTime}ms)` : '';
+            return `${message}${timeInfo}`;
+        } else {
+            return error ? `${message}: ${error}` : message;
+        }
     };
 
     return {

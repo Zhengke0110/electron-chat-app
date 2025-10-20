@@ -51,7 +51,8 @@
 
         <!-- 消息输入区域 -->
         <div class="border-t bg-white px-6 py-4">
-            <MessageInput v-model="userInput" placeholder="输入消息..." @create="handleSendMessage" />
+            <MessageInput v-model="userInput" placeholder="输入消息..." @create="handleSendMessage"
+                @create-with-image="handleSendMessageWithImage" />
         </div>
     </div>
 </template>
@@ -66,6 +67,7 @@ import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { useDbStore } from '@/store/db';
 import { useAIStream } from '@/composables';
 import type { ModelConfig } from '@/types';
+import type { MessageWithImage } from '@/components/MessageInput/src/types';
 
 const route = useRoute();
 const router = useRouter();
@@ -350,6 +352,95 @@ const handleSendMessage = async (message: string) => {
 
     // 生成 AI 回答
     await generateAIResponse(message);
+};
+
+// 发送带图片的消息
+const handleSendMessageWithImage = async (data: MessageWithImage) => {
+    console.log('📸 [Chat] 处理带图片的消息:', {
+        hasText: !!data.text,
+        hasImage: !!data.image,
+        textLength: data.text?.length || 0,
+        imageFileName: data.image?.attachment.fileName,
+        imageSize: data.image?.attachment.fileSize,
+        descriptionLength: data.image?.description?.length || 0
+    });
+
+    if (!conversationId.value) {
+        console.warn('⚠️ [Chat] 没有会话ID，无法发送消息');
+        return;
+    }
+
+    // 检查是否选择了模型
+    if (!selectedModelId.value) {
+        console.warn('⚠️ [Chat] 未选择模型');
+        alert('⚠️ 请先选择一个 AI 模型');
+        return;
+    }
+
+    const selectedConfig = modelConfigs.value.find(c => c.id === selectedModelId.value);
+    if (!selectedConfig || !selectedConfig.isActive) {
+        console.warn('⚠️ [Chat] 模型配置无效:', selectedConfig);
+        alert('⚠️ 请选择一个有效的模型');
+        return;
+    }
+
+    console.log('✅ [Chat] 使用模型:', selectedConfig.name, selectedConfig.modelType);
+
+    const now = new Date().toISOString();
+
+    // 构建消息内容：图片描述 + 用户文本
+    let messageContent = data.image?.description || '发送了一张图片';
+    if (data.text) {
+        messageContent += `\n\n${data.text}`;
+    }
+
+    console.log('📝 [Chat] 消息内容:', {
+        length: messageContent.length,
+        preview: messageContent.substring(0, 100) + (messageContent.length > 100 ? '...' : '')
+    });
+
+    // 创建可序列化的附件（移除 Blob URL）
+    const serializableAttachments = data.image ? [{
+        id: data.image.attachment.id,
+        fileName: data.image.attachment.fileName,
+        filePath: data.image.attachment.filePath,
+        fileUrl: '', // Blob URL 不能存储到 IndexedDB，清空
+        mimeType: data.image.attachment.mimeType,
+        fileSize: data.image.attachment.fileSize,
+        width: data.image.attachment.width,
+        height: data.image.attachment.height,
+        thumbnail: data.image.attachment.thumbnail,
+        uploadedAt: data.image.attachment.uploadedAt
+    }] : undefined;
+
+    console.log('📦 [Chat] 序列化后的附件:', serializableAttachments);
+
+    // 添加用户消息（包含图片附件）
+    const messageData = {
+        conversationId: conversationId.value,
+        role: 'user' as const,
+        content: messageContent,
+        type: 'question' as const,
+        status: 'success' as const,
+        imageAttachments: serializableAttachments,
+        metadata: data.image ? {
+            visionModel: data.image.description,
+            hasImage: true
+        } : undefined,
+        createdAt: now
+    };
+
+    console.log('💾 [Chat] 保存消息到数据库:', messageData);
+
+    await dbStore.addMessageToConversation(messageData);
+
+    console.log('✅ [Chat] 消息已保存，当前消息数:', currentMessages.value.length);
+
+    scrollToBottomSmooth();
+
+    // 生成 AI 回答（基于图片描述和用户问题）
+    console.log('🤖 [Chat] 开始生成 AI 回答...');
+    await generateAIResponse(messageContent);
 };
 
 // 监听路由变化

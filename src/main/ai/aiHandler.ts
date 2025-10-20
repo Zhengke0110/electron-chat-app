@@ -48,6 +48,21 @@ export class AIHandler {
         ipcMain.on(IPC_CHANNELS.AI_TEST_CONNECTION, async (event, request: AITestConnectionRequest) => {
             await this.handleTestConnection(request);
         });
+
+        // 处理视觉分析请求
+        ipcMain.handle('vision:analyze-image', async (event, data: {
+            imageBase64: string;
+            visionConfig: {
+                apiKey: string;
+                baseUrl: string;
+                model: string;
+                temperature: number;
+                maxTokens: number;
+            };
+            prompt: string;
+        }) => {
+            return await this.handleVisionAnalysis(data);
+        });
     }
 
     /**
@@ -222,6 +237,79 @@ export class AIHandler {
     }
 
     /**
+     * 处理视觉分析请求
+     */
+    private async handleVisionAnalysis(data: {
+        imageBase64: string;
+        visionConfig: {
+            apiKey: string;
+            baseUrl: string;
+            model: string;
+            temperature: number;
+            maxTokens: number;
+        };
+        prompt: string;
+    }): Promise<{ success: boolean; description?: string; error?: string }> {
+        const { imageBase64, visionConfig, prompt } = data;
+
+        try {
+            // 创建 OpenAI 客户端
+            const client = new OpenAI({
+                apiKey: visionConfig.apiKey,
+                baseURL: visionConfig.baseUrl,
+                dangerouslyAllowBrowser: false,
+            });
+
+            // 调用视觉模型
+            const response = await client.chat.completions.create({
+                model: visionConfig.model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: imageBase64, // Base64 Data URL
+                                },
+                            },
+                            {
+                                type: 'text',
+                                text: prompt,
+                            },
+                        ],
+                    },
+                ],
+                temperature: visionConfig.temperature,
+                max_tokens: visionConfig.maxTokens,
+            });
+
+            // 提取描述
+            const description = response.choices[0]?.message?.content || '';
+
+            return {
+                success: true,
+                description,
+            };
+        } catch (error) {
+            console.error('[AIHandler] 视觉分析失败:', error);
+
+            let errorMessage = '视觉分析失败';
+
+            if (error instanceof OpenAI.APIError) {
+                errorMessage = `API 错误: ${error.message}`;
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+
+            return {
+                success: false,
+                error: errorMessage,
+            };
+        }
+    }
+
+    /**
      * 清理资源
      */
     public cleanup() {
@@ -235,5 +323,6 @@ export class AIHandler {
         ipcMain.removeAllListeners(IPC_CHANNELS.AI_SEND_MESSAGE);
         ipcMain.removeAllListeners(IPC_CHANNELS.AI_CANCEL_STREAM);
         ipcMain.removeAllListeners(IPC_CHANNELS.AI_TEST_CONNECTION);
+        ipcMain.removeAllListeners('vision:analyze-image');
     }
 }

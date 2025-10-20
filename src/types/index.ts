@@ -1,6 +1,19 @@
 // 模型类型
 export type ModelType = 'chat' | 'vision';
 
+// 图片附件接口
+export interface ImageAttachment {
+    id?: number;
+    fileName: string;
+    filePath: string;
+    fileUrl: string;
+    mimeType: string;
+    fileSize: number;
+    width?: number;
+    height?: number;
+    thumbnail?: string;
+}
+
 // 模型配置接口
 export interface ModelConfig {
     id?: number;

@@ -62,10 +62,24 @@ export interface ElectronAPI {
          */
         onTestResult: (callback: (result: AITestConnectionResult) => void) => () => void;
     };
+
+    // IPC Renderer（用于其他通道）
+    ipcRenderer: {
+        invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+        on: (channel: string, listener: (...args: unknown[]) => void) => void;
+        removeListener: (channel: string, listener: (...args: unknown[]) => void) => void;
+    };
 }
 
 declare global {
     interface Window {
         electronAPI: ElectronAPI;
+        electron: {
+            ipcRenderer: {
+                invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+                on: (channel: string, listener: (...args: unknown[]) => void) => void;
+                removeListener: (channel: string, listener: (...args: unknown[]) => void) => void;
+            };
+        };
     }
 }

@@ -105,3 +105,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
         },
     },
 });
+
+// 暴露通用 IPC Renderer（用于其他通道）
+contextBridge.exposeInMainWorld('electron', {
+    ipcRenderer: {
+        invoke: (channel: string, ...args: unknown[]) => {
+            return ipcRenderer.invoke(channel, ...args);
+        },
+        on: (channel: string, listener: (...args: unknown[]) => void) => {
+            ipcRenderer.on(channel, listener);
+        },
+        removeListener: (channel: string, listener: (...args: unknown[]) => void) => {
+            ipcRenderer.removeListener(channel, listener);
+        },
+    },
+});

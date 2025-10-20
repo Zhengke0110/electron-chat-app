@@ -2,9 +2,14 @@
     <div class="h-full flex flex-col bg-gray-50">
         <!-- 聊天头部 -->
         <div class="border-b bg-white px-6 py-4">
-            <h2 class="text-xl font-semibold text-gray-800">
-                {{ conversationId ? `会话 #${conversationId}` : '新对话' }}
-            </h2>
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    {{ conversationId ? `会话 #${conversationId}` : '新对话' }}
+                </h2>
+
+                <!-- 模型选择器 -->
+                <ModelSelector v-model="selectedModelId" :configs="modelConfigs" @change="handleModelChange" />
+            </div>
         </div>
 
         <!-- 消息列表区域 -->
@@ -37,9 +42,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { storeToRefs } from 'pinia';
 import MessageInput from '@/components/MessageInput';
+import ModelSelector from '@/components/ModelSelector';
 import { useDbStore } from '@/store/db';
 import type { Message } from '@/db';
+import type { ModelConfig } from '@/types';
 
 const route = useRoute();
 const dbStore = useDbStore();
@@ -47,15 +55,115 @@ const dbStore = useDbStore();
 const conversationId = ref<number | null>(null);
 const userInput = ref('');
 const messages = ref<Message[]>([]);
+const selectedModelId = ref<number | undefined>(undefined);
 
-// 调试信息 - 页面挂载时输出
-onMounted(() => {
+// 从 store 获取模型配置
+const { modelConfigs } = storeToRefs(dbStore);
+
+// 初始化：加载模型配置和设置默认模型
+onMounted(async () => {
     console.log('=== Chat 页面已挂载 (onMounted) ===');
     console.log('当前路由路径:', route.path);
     console.log('路由参数 id:', route.params.id);
     console.log('路由 query:', route.query);
+
+    // 加载模型配置
+    await dbStore.loadModelConfigs();
+
+    // 设置默认选中的模型
+    const defaultConfig = await dbStore.getDefaultModelConfig();
+    if (defaultConfig?.id) {
+        selectedModelId.value = defaultConfig.id;
+        console.log('默认模型:', defaultConfig.name);
+    }
+
     // 注意: loadConversation 会在 watch 的 immediate: true 中自动调用
 });
+
+// 处理模型切换
+const handleModelChange = (config: ModelConfig) => {
+    console.log('切换模型:', config.name);
+    console.log('厂商:', config.provider, '| 模型:', config.model);
+};
+
+// 生成 AI 回答
+const generateAIResponse = async (userMessage: string) => {
+    if (!conversationId.value || !selectedModelId.value) {
+        console.error('无法生成回答：缺少会话ID或模型ID');
+        return;
+    }
+
+    // 获取当前选中的模型配置
+    const modelConfig = modelConfigs.value.find(c => c.id === selectedModelId.value);
+    if (!modelConfig) {
+        console.error('未找到模型配置');
+        return;
+    }
+
+    const now = new Date().toISOString();
+
+    // 创建一条 loading 状态的 answer 消息
+    const answerId = await dbStore.addMessage({
+        conversationId: conversationId.value,
+        role: 'assistant',
+        content: '',
+        type: 'answer',
+        status: 'loading',
+        createdAt: now
+    });
+    console.log('✓ Loading 消息创建成功, ID:', answerId);
+
+    // 重新加载消息列表
+    messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+
+    try {
+        // 导入 AI 服务
+        const { createAIService } = await import('@/services');
+        const aiService = createAIService(modelConfig);
+
+        // 准备消息历史
+        const aiMessages = messages.value
+            .filter(m => m.id !== answerId && m.status === 'success')
+            .map(m => ({
+                role: m.role as 'user' | 'assistant' | 'system',
+                content: m.content
+            }));
+
+        console.log('开始调用 AI API...');
+        let fullContent = '';
+
+        // 使用流式响应
+        for await (const chunk of aiService.chatStream({ messages: aiMessages, stream: true })) {
+            if (!chunk.done && chunk.content) {
+                fullContent += chunk.content;
+                // 实时更新消息内容
+                await dbStore.updateMessage(answerId as number, {
+                    content: fullContent,
+                    updatedAt: new Date().toISOString()
+                });
+                // 重新加载消息以显示更新
+                messages.value = await dbStore.getMessagesByConversation(conversationId.value!);
+            }
+        }
+
+        // 标记为成功
+        await dbStore.updateMessage(answerId as number, {
+            status: 'success',
+            updatedAt: new Date().toISOString()
+        });
+        messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+        console.log('✓ AI 回答生成成功');
+    } catch (error) {
+        console.error('AI 回答生成失败:', error);
+        // 标记为失败
+        await dbStore.updateMessage(answerId as number, {
+            content: `生成回答失败: ${error instanceof Error ? error.message : String(error)}`,
+            status: 'error',
+            updatedAt: new Date().toISOString()
+        });
+        messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+    }
+};
 
 // 从路由获取会话 ID
 const loadConversation = async () => {
@@ -78,36 +186,7 @@ const loadConversation = async () => {
 
         if (query && messages.value.length === 1 && messages.value[0].type === 'question') {
             console.log('检测到新会话，准备创建 AI 回答消息...');
-
-            // 创建一条 loading 状态的 answer 消息
-            const now = new Date().toISOString();
-            const answerId = await dbStore.addMessage({
-                conversationId: conversationId.value,
-                role: 'assistant',
-                content: '',
-                type: 'answer',
-                status: 'loading',
-                createdAt: now
-            });
-            console.log('✓ Loading 消息创建成功, ID:', answerId);
-
-            // 重新加载消息列表以包含新创建的 loading 消息
-            messages.value = await dbStore.getMessagesByConversation(conversationId.value);
-            console.log('重新加载后消息数量:', messages.value.length);
-
-            // TODO: 这里后续需要调用 AI API 来生成真实的回答
-            // 模拟 AI 回答（3秒后）
-            console.log('3秒后将模拟 AI 回答...');
-            setTimeout(async () => {
-                console.log('开始更新 AI 回答...');
-                await dbStore.updateMessage(answerId as number, {
-                    content: '这是一个模拟的 AI 回答。真实场景中，这里会调用 AI API。',
-                    status: 'success',
-                    updatedAt: new Date().toISOString()
-                });
-                messages.value = await dbStore.getMessagesByConversation(conversationId.value!);
-                console.log('✓ AI 回答更新成功');
-            }, 3000);
+            await generateAIResponse(messages.value[0].content);
         }
     } else {
         console.log('未找到会话 ID');
@@ -138,34 +217,12 @@ const handleSendMessage = async (message: string) => {
     });
     console.log('✓ 用户消息已添加');
 
-    // 添加 loading 状态的 AI 回答
-    const answerId = await dbStore.addMessage({
-        conversationId: conversationId.value,
-        role: 'assistant',
-        content: '',
-        type: 'answer',
-        status: 'loading',
-        createdAt: now
-    });
-    console.log('✓ Loading 回答消息已添加, ID:', answerId);
-
     // 重新加载消息
     messages.value = await dbStore.getMessagesByConversation(conversationId.value);
     console.log('重新加载后消息数量:', messages.value.length);
 
-    // TODO: 调用 AI API 生成回答
-    // 模拟回答
-    console.log('2秒后将模拟 AI 回答...');
-    setTimeout(async () => {
-        console.log('开始更新 AI 回答...');
-        await dbStore.updateMessage(answerId as number, {
-            content: '这是对您问题的回答。',
-            status: 'success',
-            updatedAt: new Date().toISOString()
-        });
-        messages.value = await dbStore.getMessagesByConversation(conversationId.value!);
-        console.log('✓ AI 回答更新成功');
-    }, 2000);
+    // 生成 AI 回答
+    await generateAIResponse(message);
 };
 
 // 监听路由变化

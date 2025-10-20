@@ -1,6 +1,7 @@
 import { Dexie, type Table } from 'dexie';
 import type { ConversationProps } from '@/components/ConversationList';
 import type { ProviderProps } from '@/components/ProviderSelect';
+import type { ModelConfig } from '@/types';
 
 // 消息类型
 export interface Message {
@@ -14,12 +15,16 @@ export interface Message {
     updatedAt?: string;
 }
 
+// 导出 ModelConfig 类型供其他模块使用
+export type { ModelConfig };
+
 // 数据库类
 export class ChatDatabase extends Dexie {
     // 定义表
     conversations!: Table<ConversationProps>;
     providers!: Table<ProviderProps>;
     messages!: Table<Message>;
+    modelConfigs!: Table<ModelConfig>;
 
     constructor() {
         super('ChatAppDB');
@@ -29,6 +34,14 @@ export class ChatDatabase extends Dexie {
             conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
             providers: '++id, name, title, createdAt, updatedAt',
             messages: '++id, conversationId, role, type, status, createdAt'
+        });
+
+        // 版本 2: 添加 modelConfigs 表
+        this.version(2).stores({
+            conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
+            providers: '++id, name, title, createdAt, updatedAt',
+            messages: '++id, conversationId, role, type, status, createdAt',
+            modelConfigs: '++id, provider, isDefault, isActive, createdAt, updatedAt'
         });
     }
 }
@@ -102,50 +115,79 @@ export const dbHelpers = {
         return await db.messages.delete(id);
     },
 
+    // ModelConfigs
+    async getAllModelConfigs() {
+        return await db.modelConfigs.orderBy('createdAt').toArray();
+    },
+
+    async getActiveModelConfigs() {
+        return await db.modelConfigs.where('isActive').equals(1).toArray();
+    },
+
+    async getDefaultModelConfig() {
+        return await db.modelConfigs.where('isDefault').equals(1).first();
+    },
+
+    async getModelConfig(id: number) {
+        return await db.modelConfigs.get(id);
+    },
+
+    async addModelConfig(config: Omit<ModelConfig, 'id'>) {
+        // 如果设置为默认，先取消其他配置的默认状态
+        if (config.isDefault) {
+            await db.modelConfigs.toCollection().modify({ isDefault: false });
+        }
+        return await db.modelConfigs.add(config as ModelConfig);
+    },
+
+    async updateModelConfig(id: number, changes: Partial<ModelConfig>) {
+        // 如果设置为默认，先取消其他配置的默认状态
+        if (changes.isDefault) {
+            await db.modelConfigs.toCollection().modify({ isDefault: false });
+        }
+        // 更新 updatedAt
+        changes.updatedAt = new Date().toISOString();
+        return await db.modelConfigs.update(id, changes);
+    },
+
+    async deleteModelConfig(id: number) {
+        return await db.modelConfigs.delete(id);
+    },
+
+    async setDefaultModelConfig(id: number) {
+        // 取消所有配置的默认状态
+        await db.modelConfigs.toCollection().modify({ isDefault: false });
+        // 设置指定配置为默认
+        return await db.modelConfigs.update(id, {
+            isDefault: true,
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    async toggleModelConfigActive(id: number) {
+        const config = await db.modelConfigs.get(id);
+        if (config) {
+            return await db.modelConfigs.update(id, {
+                isActive: !config.isActive,
+                updatedAt: new Date().toISOString()
+            });
+        }
+    },
+
     // 工具方法
     async clearAllData() {
         await db.conversations.clear();
         await db.providers.clear();
         await db.messages.clear();
+        await db.modelConfigs.clear();
     },
 
     async initializeDefaultData() {
-        // 检查是否已有数据
-        const providerCount = await db.providers.count();
-        if (providerCount === 0) {
-            // 添加默认 Providers
-            await db.providers.bulkAdd([
-                {
-                    id: 1,
-                    name: 'openai',
-                    title: 'OpenAI',
-                    desc: 'OpenAI 提供的先进 AI 模型',
-                    avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=openai',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo']
-                },
-                {
-                    id: 2,
-                    name: 'anthropic',
-                    title: 'Anthropic',
-                    desc: 'Claude 系列模型',
-                    avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=anthropic',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku']
-                },
-                {
-                    id: 3,
-                    name: 'google',
-                    title: 'Google',
-                    desc: 'Google Gemini 模型',
-                    avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=google',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    models: ['gemini-pro', 'gemini-ultra']
-                }
-            ]);
+        // 初始化默认的 DeepSeek 模型配置
+        const modelConfigCount = await db.modelConfigs.count();
+        if (modelConfigCount === 0) {
+            const { DEEPSEEK_DEFAULT_CONFIG } = await import('../constants/providers');
+            await db.modelConfigs.add(DEEPSEEK_DEFAULT_CONFIG as ModelConfig);
         }
     }
 };

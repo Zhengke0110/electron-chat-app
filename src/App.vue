@@ -99,41 +99,40 @@ const handleContextMenu = (id: number) => {
 const handleClearDatabase = async () => {
     console.log('==============================================');
     console.log('=== 清空数据库操作 ===');
-    
+
     const confirmed = confirm('⚠️ 确定要清空所有数据吗？\n\n此操作将删除：\n- 所有会话\n- 所有消息\n- 所有提供商配置\n\n此操作不可恢复！');
-    
+
     if (!confirmed) {
         console.log('用户取消了清空操作');
         console.log('==============================================');
         return;
     }
-    
+
     try {
         console.log('开始清空数据库...');
-        
+
         // 导入 dbHelpers
         const { dbHelpers } = await import('./db');
-        
+
         // 清空所有数据
         await dbHelpers.clearAllData();
         console.log('✓ 数据库已清空');
-        
+
         // 重新加载会话列表
         await dbStore.loadConversations();
-        await dbStore.loadProviders();
         console.log('✓ 已重新加载空列表');
-        
+
         // 跳转到首页
         router.push('/');
         console.log('✓ 已跳转到首页');
-        
+
         alert('✅ 数据库已成功清空！');
         console.log('=== 清空完成 ===');
     } catch (error) {
         console.error('❌ 清空数据库失败:', error);
         alert('❌ 清空数据库失败: ' + error);
     }
-    
+
     console.log('==============================================');
 };
 </script>

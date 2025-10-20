@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { dbHelpers, type Message } from '../db';
+import { dbHelpers, type Message, type ModelConfig } from '../db';
 import type { ConversationProps } from '@/components/ConversationList';
 import type { ProviderProps } from '@/components/ProviderSelect';
 
@@ -9,6 +9,7 @@ export const useDbStore = defineStore('db', () => {
     const conversations = ref<ConversationProps[]>([]);
     const providers = ref<ProviderProps[]>([]);
     const currentConversationMessages = ref<Message[]>([]);
+    const modelConfigs = ref<ModelConfig[]>([]);
     const isLoading = ref(false);
 
     // Actions - Conversations
@@ -122,6 +123,88 @@ export const useDbStore = defineStore('db', () => {
         await dbHelpers.initializeDefaultData();
         await loadConversations();
         await loadProviders();
+        await loadModelConfigs();
+    };
+
+    // Actions - ModelConfigs
+    const loadModelConfigs = async () => {
+        isLoading.value = true;
+        try {
+            modelConfigs.value = await dbHelpers.getAllModelConfigs();
+        } catch (error) {
+            console.error('加载模型配置失败:', error);
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    const getActiveModelConfigs = async () => {
+        try {
+            return await dbHelpers.getActiveModelConfigs();
+        } catch (error) {
+            console.error('获取激活的模型配置失败:', error);
+            return [];
+        }
+    };
+
+    const getDefaultModelConfig = async () => {
+        try {
+            return await dbHelpers.getDefaultModelConfig();
+        } catch (error) {
+            console.error('获取默认模型配置失败:', error);
+            return null;
+        }
+    };
+
+    const createModelConfig = async (config: Omit<ModelConfig, 'id'>) => {
+        try {
+            const id = await dbHelpers.addModelConfig(config);
+            await loadModelConfigs();
+            return id;
+        } catch (error) {
+            console.error('创建模型配置失败:', error);
+            throw error;
+        }
+    };
+
+    const updateModelConfig = async (id: number, changes: Partial<ModelConfig>) => {
+        try {
+            await dbHelpers.updateModelConfig(id, changes);
+            await loadModelConfigs();
+        } catch (error) {
+            console.error('更新模型配置失败:', error);
+            throw error;
+        }
+    };
+
+    const deleteModelConfig = async (id: number) => {
+        try {
+            await dbHelpers.deleteModelConfig(id);
+            await loadModelConfigs();
+        } catch (error) {
+            console.error('删除模型配置失败:', error);
+            throw error;
+        }
+    };
+
+    const setDefaultModelConfig = async (id: number) => {
+        try {
+            await dbHelpers.setDefaultModelConfig(id);
+            await loadModelConfigs();
+        } catch (error) {
+            console.error('设置默认模型配置失败:', error);
+            throw error;
+        }
+    };
+
+    const toggleModelConfigActive = async (id: number) => {
+        try {
+            await dbHelpers.toggleModelConfigActive(id);
+            await loadModelConfigs();
+        } catch (error) {
+            console.error('切换模型配置激活状态失败:', error);
+            throw error;
+        }
     };
 
     return {
@@ -129,6 +212,7 @@ export const useDbStore = defineStore('db', () => {
         conversations,
         providers,
         currentConversationMessages,
+        modelConfigs,
         isLoading,
 
         // Actions
@@ -142,5 +226,15 @@ export const useDbStore = defineStore('db', () => {
         getMessagesByConversation,
         updateMessage,
         initialize,
+
+        // ModelConfigs Actions
+        loadModelConfigs,
+        getActiveModelConfigs,
+        getDefaultModelConfig,
+        createModelConfig,
+        updateModelConfig,
+        deleteModelConfig,
+        setDefaultModelConfig,
+        toggleModelConfigActive,
     };
 });

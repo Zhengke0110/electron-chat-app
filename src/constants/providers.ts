@@ -4,11 +4,13 @@ import type { ProviderTemplate, ModelConfig } from '@/types';
  * 预设的 AI 厂商模板配置
  */
 export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
+    // ========== 对话模型 ==========
     {
         provider: 'deepseek',
         name: 'DeepSeek',
+        modelType: 'chat',
         baseUrl: 'https://api.deepseek.com/v1',
-        models: ['deepseek-chat', 'deepseek-coder'],
+        models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
         icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=deepseek',
         description: 'DeepSeek 提供的高性能 AI 模型，支持聊天和代码生成',
         defaultParams: {
@@ -19,6 +21,7 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     {
         provider: 'openai',
         name: 'OpenAI',
+        modelType: 'chat',
         baseUrl: 'https://api.openai.com/v1',
         models: ['gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-3.5-turbo'],
         icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=openai',
@@ -31,8 +34,9 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     {
         provider: 'anthropic',
         name: 'Anthropic',
+        modelType: 'chat',
         baseUrl: 'https://api.anthropic.com/v1',
-        models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+        models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'],
         icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=anthropic',
         description: 'Anthropic Claude 系列模型',
         defaultParams: {
@@ -43,6 +47,7 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     {
         provider: 'custom',
         name: '自定义',
+        modelType: 'chat',
         baseUrl: '',
         models: [],
         icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=custom',
@@ -50,6 +55,73 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
         defaultParams: {
             temperature: 0.7,
             maxTokens: 4000
+        }
+    },
+
+    // ========== 视觉模型 ==========
+    {
+        provider: 'qwen-vision',
+        name: '通义千问 VL',
+        modelType: 'vision',
+        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        models: ['qwen-vl-max', 'qwen-vl-plus', 'qwen-vl-v1'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=qwen',
+        description: '阿里云通义千问视觉模型，支持图片理解和OCR',
+        defaultParams: {
+            temperature: 0.8,
+            maxTokens: 2000
+        }
+    },
+    {
+        provider: 'openai-vision',
+        name: 'OpenAI Vision',
+        modelType: 'vision',
+        baseUrl: 'https://api.openai.com/v1',
+        models: ['gpt-4o', 'gpt-4-turbo', 'gpt-4-vision-preview'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=openai-vision',
+        description: 'OpenAI 视觉模型，支持图片识别和分析',
+        defaultParams: {
+            temperature: 0.7,
+            maxTokens: 4096
+        }
+    },
+    {
+        provider: 'anthropic-vision',
+        name: 'Claude Vision',
+        modelType: 'vision',
+        baseUrl: 'https://api.anthropic.com/v1',
+        models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=claude-vision',
+        description: 'Anthropic Claude 3 视觉模型，支持图片理解',
+        defaultParams: {
+            temperature: 0.7,
+            maxTokens: 4096
+        }
+    },
+    {
+        provider: 'gemini-vision',
+        name: 'Google Gemini Vision',
+        modelType: 'vision',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+        models: ['gemini-pro-vision', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=gemini',
+        description: 'Google Gemini 视觉模型，支持多模态理解',
+        defaultParams: {
+            temperature: 0.7,
+            maxTokens: 2048
+        }
+    },
+    {
+        provider: 'custom-vision',
+        name: '自定义视觉模型',
+        modelType: 'vision',
+        baseUrl: '',
+        models: [],
+        icon: 'https://api.dicebear.com/7.x/identicon/svg?seed=custom-vision',
+        description: '自定义兼容 OpenAI Vision API 的接口',
+        defaultParams: {
+            temperature: 0.7,
+            maxTokens: 2000
         }
     }
 ];
@@ -60,6 +132,7 @@ export const PROVIDER_TEMPLATES: ProviderTemplate[] = [
  */
 export const DEEPSEEK_DEFAULT_CONFIG: Omit<ModelConfig, 'id'> = {
     name: 'DeepSeek Chat (默认)',
+    modelType: 'chat',
     provider: 'deepseek',
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
@@ -96,6 +169,7 @@ export function createConfigFromTemplate(
     const now = new Date().toISOString();
     return {
         name: customName || `${template.name} 配置`,
+        modelType: template.modelType,
         provider: template.provider,
         baseUrl: template.baseUrl,
         model: template.models[0] || '',
@@ -108,4 +182,11 @@ export function createConfigFromTemplate(
         createdAt: now,
         updatedAt: now
     };
+}
+
+/**
+ * 根据模型类型获取所有模板
+ */
+export function getProviderTemplatesByType(modelType: 'chat' | 'vision'): ProviderTemplate[] {
+    return PROVIDER_TEMPLATES.filter(t => t.modelType === modelType);
 }

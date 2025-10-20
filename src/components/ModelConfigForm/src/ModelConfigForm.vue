@@ -25,6 +25,33 @@
 
                     <!-- 表单 -->
                     <form @submit.prevent="handleSubmit" class="space-y-6">
+                        <!-- 模型类型选择 -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">
+                                模型类型 <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" @click="handleModelTypeChange('chat')" :class="[
+                                    'px-4 py-3 border-2 rounded-lg text-left transition-all',
+                                    formData.modelType === 'chat'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                ]">
+                                    <div class="font-semibold">💬 对话模型</div>
+                                    <div class="text-xs mt-1 opacity-75">用于文本对话和推理</div>
+                                </button>
+                                <button type="button" @click="handleModelTypeChange('vision')" :class="[
+                                    'px-4 py-3 border-2 rounded-lg text-left transition-all',
+                                    formData.modelType === 'vision'
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                                ]">
+                                    <div class="font-semibold">👁️ 视觉模型</div>
+                                    <div class="text-xs mt-1 opacity-75">用于图片识别和分析</div>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 基础信息 -->
                         <BasicInfoSection :model-value="formData" @update:name="formData.name = $event"
                             @update:api-key="formData.apiKey = $event" @update:is-active="formData.isActive = $event"
@@ -99,7 +126,7 @@ import BasicInfoSection from './BasicInfoSection.vue';
 import ProviderSection from './ProviderSection.vue';
 import ModelSection from './ModelSection.vue';
 import AdvancedSection from './AdvancedSection.vue';
-import { PROVIDER_TEMPLATES } from '@/constants/providers';
+import { PROVIDER_TEMPLATES, getProviderTemplatesByType } from '@/constants/providers';
 import { useModelConfigTest } from '@/composables/useModelConfigTest';
 import type { ModelConfigFormProps, ModelConfigFormEmits, FormData } from './types';
 import type { ProviderTemplate } from '@/types';
@@ -122,6 +149,7 @@ const isEditMode = computed(() => !!props.modelValue?.id);
 // 表单数据
 const formData = ref<FormData>({
     name: '',
+    modelType: 'chat',
     provider: 'deepseek',
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
@@ -153,6 +181,7 @@ watch(() => props.modelValue, (newValue) => {
     if (newValue) {
         formData.value = {
             name: newValue.name,
+            modelType: newValue.modelType,
             provider: newValue.provider,
             baseUrl: newValue.baseUrl,
             model: newValue.model,
@@ -172,6 +201,7 @@ watch(() => props.isOpen, (isOpen) => {
     if (isOpen && !props.modelValue) {
         formData.value = {
             name: '',
+            modelType: 'chat',
             provider: 'deepseek',
             baseUrl: 'https://api.deepseek.com/v1',
             model: 'deepseek-chat',
@@ -185,6 +215,28 @@ watch(() => props.isOpen, (isOpen) => {
         clearTestResult();
     }
 });
+
+// 模型类型切换
+const handleModelTypeChange = (type: 'chat' | 'vision') => {
+    if (formData.value.modelType === type) return;
+
+    formData.value.modelType = type;
+
+    // 根据类型设置默认厂商
+    const templates = getProviderTemplatesByType(type);
+
+    if (templates.length > 0) {
+        const defaultTemplate = templates[0];
+        formData.value.provider = defaultTemplate.provider;
+        formData.value.baseUrl = defaultTemplate.baseUrl;
+        formData.value.model = defaultTemplate.models[0] || '';
+        formData.value.temperature = defaultTemplate.defaultParams.temperature;
+        formData.value.maxTokens = defaultTemplate.defaultParams.maxTokens;
+    }
+
+    // 清除测试结果
+    clearTestResult();
+};
 
 // 厂商变化时更新默认参数
 const handleProviderChanged = (template: ProviderTemplate) => {

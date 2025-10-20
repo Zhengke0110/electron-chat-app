@@ -25,9 +25,41 @@
                     </button>
                 </div>
 
+                <!-- 类型筛选标签 -->
+                <div class="px-6 py-3 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center gap-2">
+                        <button @click="selectedModelType = 'all'" :class="[
+                            'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
+                            selectedModelType === 'all'
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-100'
+                        ]">
+                            全部 ({{ configCounts.all }})
+                        </button>
+                        <button @click="selectedModelType = 'chat'" :class="[
+                            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1',
+                            selectedModelType === 'chat'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-100'
+                        ]">
+                            <span>💬</span>
+                            <span>对话模型 ({{ configCounts.chat }})</span>
+                        </button>
+                        <button @click="selectedModelType = 'vision'" :class="[
+                            'px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1',
+                            selectedModelType === 'vision'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-100'
+                        ]">
+                            <span>👁️</span>
+                            <span>视觉模型 ({{ configCounts.vision }})</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 配置列表 -->
                 <div class="p-6">
-                    <ModelConfigList :configs="modelConfigs" @edit="handleEditConfig" @delete="handleDeleteConfig"
+                    <ModelConfigList :configs="filteredConfigs" @edit="handleEditConfig" @delete="handleDeleteConfig"
                         @test="handleTestConfig" @toggle-active="handleToggleActive" @set-default="handleSetDefault" />
                 </div>
             </div>
@@ -40,15 +72,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import ModelConfigList from '@/components/ModelConfigList';
 import ModelConfigForm from '@/components/ModelConfigForm';
 import { useDbStore } from '@/store/db';
 import { modelConfigService } from '@/services/modelConfigService';
-import type { ModelConfig } from '@/types';
+import type { ModelConfig, ModelType } from '@/types';
 
 const dbStore = useDbStore();
+
+// 当前筛选的模型类型
+const selectedModelType = ref<ModelType | 'all'>('all');
 
 // ModelConfigForm 相关状态
 const isFormOpen = ref(false);
@@ -56,6 +91,24 @@ const editingConfig = ref<ModelConfig | undefined>(undefined);
 
 // 从 store 获取 modelConfigs
 const { modelConfigs } = storeToRefs(dbStore);
+
+// 根据类型筛选配置
+const filteredConfigs = computed(() => {
+    if (selectedModelType.value === 'all') {
+        return modelConfigs.value;
+    }
+    return modelConfigs.value.filter(c => c.modelType === selectedModelType.value);
+});
+
+// 统计不同类型的配置数量
+const configCounts = computed(() => {
+    const counts = { chat: 0, vision: 0, all: 0 };
+    modelConfigs.value.forEach(c => {
+        counts[c.modelType]++;
+        counts.all++;
+    });
+    return counts;
+});
 
 // 页面加载时获取配置列表
 onMounted(async () => {

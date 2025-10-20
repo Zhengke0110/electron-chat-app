@@ -13,6 +13,7 @@ export interface ModelConfigFormEmits {
 
 export interface FormData {
     name: string;
+    modelType: 'chat' | 'vision';
     provider: string;
     baseUrl: string;
     model: string;

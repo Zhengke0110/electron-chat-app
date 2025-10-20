@@ -31,16 +31,26 @@
                                 config.isActive ? 'text-gray-900' : 'text-gray-500'
                             ]">{{ config.name }}</h4>
 
+                            <!-- 模型类型标签 -->
+                            <span :class="[
+                                'px-2 py-0.5 text-xs font-medium rounded',
+                                config.modelType === 'chat'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-purple-100 text-purple-700'
+                            ]">
+                                {{ config.modelType === 'chat' ? '💬 对话' : '👁️ 视觉' }}
+                            </span>
+
                             <!-- 默认标签 -->
                             <span v-if="config.isDefault"
-                                class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                                默认
+                                class="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                                ⭐ 默认
                             </span>
 
                             <!-- 激活状态 -->
                             <span :class="config.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'"
                                 class="px-2 py-0.5 text-xs font-medium rounded">
-                                {{ config.isActive ? '已启用' : '未启用' }}
+                                {{ config.isActive ? '✅ 已启用' : '⏸️ 未启用' }}
                             </span>
 
                             <!-- 测试状态 -->

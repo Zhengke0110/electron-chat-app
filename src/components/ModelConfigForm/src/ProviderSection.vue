@@ -37,6 +37,7 @@ import type { ProviderTemplate } from '@/types';
 
 interface ProviderSectionProps {
     modelValue: {
+        modelType: 'chat' | 'vision';
         provider: string;
         baseUrl: string;
     };
@@ -51,22 +52,25 @@ interface ProviderSectionEmits {
 const props = defineProps<ProviderSectionProps>();
 const emit = defineEmits<ProviderSectionEmits>();
 
-const providerTemplates = PROVIDER_TEMPLATES;
+// 根据模型类型过滤厂商模板
+const providerTemplates = computed(() => {
+    return PROVIDER_TEMPLATES.filter(t => t.modelType === props.modelValue.modelType);
+});
 
 const providerOptions = computed<SelectOption[]>(() => {
-    return providerTemplates.map(t => ({
+    return providerTemplates.value.map(t => ({
         label: t.name,
         value: t.provider
     }));
 });
 
 const selectedTemplate = computed(() => {
-    return providerTemplates.find(t => t.provider === props.modelValue.provider);
+    return providerTemplates.value.find(t => t.provider === props.modelValue.provider);
 });
 
 const handleProviderChange = (value: string) => {
     emit('update:provider', value);
-    const template = providerTemplates.find(t => t.provider === value);
+    const template = providerTemplates.value.find(t => t.provider === value);
     if (template) {
         emit('update:baseUrl', template.baseUrl);
         emit('providerChanged', template);

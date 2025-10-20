@@ -14,11 +14,11 @@
 
         <!-- 消息列表区域 -->
         <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4">
-            <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-gray-400">
+            <div v-if="currentMessages.length === 0" class="h-full flex items-center justify-center text-gray-400">
                 暂无消息
             </div>
             <div v-else class="space-y-4 max-w-4xl mx-auto">
-                <div v-for="msg in messages" :key="msg.id" class="flex"
+                <div v-for="msg in currentMessages" :key="msg.id" class="flex"
                     :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
                     <div class="max-w-[70%] px-4 py-3 rounded-lg"
                         :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200'">
@@ -66,12 +66,11 @@ const { isStreaming, sendStreamMessage, cancelStream } = useAIStream();
 
 const conversationId = ref<number | null>(null);
 const userInput = ref('');
-const messages = ref<Message[]>([]);
 const selectedModelId = ref<number | undefined>(undefined);
 const messagesContainer = ref<HTMLElement | null>(null); // 消息容器引用
 
-// 从 store 获取模型配置
-const { modelConfigs } = storeToRefs(dbStore);
+// ✨ 从 store 获取响应式数据
+const { modelConfigs, currentMessages } = storeToRefs(dbStore);
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -158,8 +157,8 @@ const generateAIResponse = async (userMessage: string) => {
 
     const now = new Date().toISOString();
 
-    // 创建一条 loading 状态的 answer 消息
-    const answerId = await dbStore.addMessage({
+    // ✨ 创建一条 loading 状态的 answer 消息
+    const answerId = await dbStore.addMessageToConversation({
         conversationId: conversationId.value,
         role: 'assistant',
         content: '',
@@ -168,11 +167,8 @@ const generateAIResponse = async (userMessage: string) => {
         createdAt: now
     });
 
-    // 重新加载消息列表，获取新创建的消息
-    messages.value = await dbStore.getMessagesByConversation(conversationId.value);
-
-    // 找到刚创建的消息对象（保持引用）
-    const streamingMessage = messages.value.find(m => m.id === answerId);
+    // ✨ 找到刚创建的消息对象（保持引用）
+    const streamingMessage = currentMessages.value.find(m => m.id === answerId);
 
     if (!streamingMessage) {
         console.error('未找到创建的消息');
@@ -184,7 +180,7 @@ const generateAIResponse = async (userMessage: string) => {
 
     try {
         // 准备消息历史
-        const aiMessages = messages.value
+        const aiMessages = currentMessages.value
             .filter(m => m.id !== answerId && m.status === 'success')
             .map(m => ({
                 role: m.role as 'user' | 'assistant' | 'system',
@@ -214,7 +210,7 @@ const generateAIResponse = async (userMessage: string) => {
 
                     // 定期更新数据库（减少频繁写入）
                     if (updateCounter % UPDATE_INTERVAL === 0) {
-                        dbStore.updateMessage(answerId as number, {
+                        dbStore.updateMessageInConversation(answerId as number, {
                             content: fullContent,
                             updatedAt: new Date().toISOString()
                         });
@@ -229,7 +225,7 @@ const generateAIResponse = async (userMessage: string) => {
                     streamingMessage.status = 'success';
                     streamingMessage.updatedAt = new Date().toISOString();
 
-                    await dbStore.updateMessage(answerId as number, {
+                    await dbStore.updateMessageInConversation(answerId as number, {
                         content: streamingMessage.content,
                         status: 'success',
                         updatedAt: new Date().toISOString()
@@ -248,7 +244,7 @@ const generateAIResponse = async (userMessage: string) => {
                     streamingMessage.updatedAt = new Date().toISOString();
 
                     // 标记为失败
-                    await dbStore.updateMessage(answerId as number, {
+                    await dbStore.updateMessageInConversation(answerId as number, {
                         content: errorText,
                         status: 'error',
                         updatedAt: new Date().toISOString()
@@ -267,7 +263,7 @@ const generateAIResponse = async (userMessage: string) => {
         streamingMessage.updatedAt = new Date().toISOString();
 
         // 标记为失败
-        await dbStore.updateMessage(answerId as number, {
+        await dbStore.updateMessageInConversation(answerId as number, {
             content: errorText,
             status: 'error',
             updatedAt: new Date().toISOString()
@@ -288,8 +284,8 @@ const loadConversation = async () => {
             return;
         }
 
-        // 加载该会话的所有消息
-        messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+        // ✨ 加载该会话的所有消息
+        await dbStore.loadConversationMessages(conversationId.value);
 
         // 滚动到底部
         scrollToBottomSmooth();
@@ -297,8 +293,8 @@ const loadConversation = async () => {
         // 检查是否是新创建的会话（通过 query 参数）
         const query = route.query.q;
 
-        if (query && messages.value.length === 1 && messages.value[0].type === 'question') {
-            await generateAIResponse(messages.value[0].content);
+        if (query && currentMessages.value.length === 1 && currentMessages.value[0].type === 'question') {
+            await generateAIResponse(currentMessages.value[0].content);
         }
     }
 };
@@ -329,8 +325,8 @@ const handleSendMessage = async (message: string) => {
 
     const now = new Date().toISOString();
 
-    // 添加用户消息
-    await dbStore.addMessage({
+    // ✨ 添加用户消息
+    await dbStore.addMessageToConversation({
         conversationId: conversationId.value,
         role: 'user',
         content: message,
@@ -338,9 +334,6 @@ const handleSendMessage = async (message: string) => {
         status: 'success',
         createdAt: now
     });
-
-    // 重新加载消息
-    messages.value = await dbStore.getMessagesByConversation(conversationId.value);
 
     // 滚动到底部显示新消息
     scrollToBottomSmooth();

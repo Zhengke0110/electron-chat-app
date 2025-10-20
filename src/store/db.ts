@@ -8,9 +8,12 @@ export const useDbStore = defineStore('db', () => {
     // State
     const conversations = ref<ConversationProps[]>([]);
     const providers = ref<ProviderProps[]>([]);
-    const currentConversationMessages = ref<Message[]>([]);
     const modelConfigs = ref<ModelConfig[]>([]);
     const isLoading = ref(false);
+
+    // ✨ 消息管理状态
+    const currentConversationId = ref<number | null>(null);
+    const currentMessages = ref<Message[]>([]);
 
     // Actions - Conversations
     const loadConversations = async () => {
@@ -49,6 +52,12 @@ export const useDbStore = defineStore('db', () => {
         try {
             await dbHelpers.deleteConversation(id);
             await loadConversations();
+
+            // 如果删除的是当前会话，清空消息列表
+            if (currentConversationId.value === id) {
+                currentConversationId.value = null;
+                currentMessages.value = [];
+            }
         } catch (error) {
             console.error('删除会话失败:', error);
             throw error;
@@ -67,11 +76,12 @@ export const useDbStore = defineStore('db', () => {
         }
     };
 
-    // Actions - Messages
-    const loadMessages = async (conversationId: number) => {
+    // ✨ Actions - Messages（优化后的消息管理）
+    const loadConversationMessages = async (conversationId: number) => {
         isLoading.value = true;
         try {
-            currentConversationMessages.value = await dbHelpers.getMessagesByConversation(conversationId);
+            currentConversationId.value = conversationId;
+            currentMessages.value = await dbHelpers.getMessagesByConversation(conversationId);
         } catch (error) {
             console.error('加载消息失败:', error);
         } finally {
@@ -79,13 +89,15 @@ export const useDbStore = defineStore('db', () => {
         }
     };
 
-    const addMessage = async (message: Omit<Message, 'id'>) => {
+    const addMessageToConversation = async (message: Omit<Message, 'id'>) => {
         try {
             const id = await dbHelpers.addMessage(message);
-            // 重新加载当前会话的消息
-            if (message.conversationId) {
-                await loadMessages(message.conversationId);
+
+            // 如果是当前会话，自动更新消息列表
+            if (message.conversationId === currentConversationId.value) {
+                await loadConversationMessages(message.conversationId);
             }
+
             return id;
         } catch (error) {
             console.error('添加消息失败:', error);
@@ -93,24 +105,15 @@ export const useDbStore = defineStore('db', () => {
         }
     };
 
-    const getMessagesByConversation = async (conversationId: number) => {
+    const updateMessageInConversation = async (id: number, changes: Partial<Message>) => {
         try {
-            return await dbHelpers.getMessagesByConversation(conversationId);
-        } catch (error) {
-            console.error('获取消息失败:', error);
-            throw error;
-        }
-    };
-
-    const updateMessage = async (id: number, changes: Partial<Message>) => {
-        try {
+            // 更新数据库
             await dbHelpers.updateMessage(id, changes);
-            // 如果有当前会话，重新加载消息
-            if (currentConversationMessages.value.length > 0) {
-                const conversationId = currentConversationMessages.value[0]?.conversationId;
-                if (conversationId) {
-                    await loadMessages(conversationId);
-                }
+
+            // 本地更新消息（避免重新加载数据库，优化流式更新性能）
+            const msg = currentMessages.value.find(m => m.id === id);
+            if (msg) {
+                Object.assign(msg, changes);
             }
         } catch (error) {
             console.error('更新消息失败:', error);
@@ -120,7 +123,6 @@ export const useDbStore = defineStore('db', () => {
 
     // 初始化
     const initialize = async () => {
-        // await dbHelpers.initializeDefaultData();
         await loadConversations();
         await loadProviders();
         await loadModelConfigs();
@@ -135,15 +137,6 @@ export const useDbStore = defineStore('db', () => {
             console.error('加载模型配置失败:', error);
         } finally {
             isLoading.value = false;
-        }
-    };
-
-    const getActiveModelConfigs = async () => {
-        try {
-            return await dbHelpers.getActiveModelConfigs();
-        } catch (error) {
-            console.error('获取激活的模型配置失败:', error);
-            return [];
         }
     };
 
@@ -211,25 +204,32 @@ export const useDbStore = defineStore('db', () => {
         // State
         conversations,
         providers,
-        currentConversationMessages,
         modelConfigs,
         isLoading,
 
-        // Actions
+        // ✨ 消息状态
+        currentConversationId,
+        currentMessages,
+
+        // Conversation Actions
         loadConversations,
         createConversation,
         updateConversation,
         deleteConversation,
+
+        // Provider Actions
         loadProviders,
-        loadMessages,
-        addMessage,
-        getMessagesByConversation,
-        updateMessage,
+
+        // ✨ Message Actions（优化后）
+        loadConversationMessages,
+        addMessageToConversation,
+        updateMessageInConversation,
+
+        // Initialize
         initialize,
 
-        // ModelConfigs Actions
+        // ModelConfig Actions
         loadModelConfigs,
-        getActiveModelConfigs,
         getDefaultModelConfig,
         createModelConfig,
         updateModelConfig,

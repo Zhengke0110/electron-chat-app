@@ -33,13 +33,6 @@ export class ChatDatabase extends Dexie {
         this.version(1).stores({
             conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
             providers: '++id, name, title, createdAt, updatedAt',
-            messages: '++id, conversationId, role, type, status, createdAt'
-        });
-
-        // 版本 2: 添加 modelConfigs 表
-        this.version(2).stores({
-            conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
-            providers: '++id, name, title, createdAt, updatedAt',
             messages: '++id, conversationId, role, type, status, createdAt',
             modelConfigs: '++id, provider, isDefault, isActive, createdAt, updatedAt'
         });

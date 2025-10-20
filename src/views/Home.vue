@@ -49,7 +49,7 @@ const handleCreateConversation = async (message: string) => {
         });
 
         // 2. 创建用户消息（question 类型）
-        await dbStore.addMessage({
+        await dbStore.addMessageToConversation({
             conversationId: conversationId as number,
             role: 'user',
             content: message,

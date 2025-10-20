@@ -13,7 +13,7 @@
         </div>
 
         <!-- 消息列表区域 -->
-        <div class="flex-1 overflow-y-auto px-6 py-4">
+        <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4">
             <div v-if="messages.length === 0" class="h-full flex items-center justify-center text-gray-400">
                 暂无消息
             </div>
@@ -22,11 +22,18 @@
                     :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
                     <div class="max-w-[70%] px-4 py-3 rounded-lg"
                         :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200'">
-                        <div v-if="msg.status === 'loading'" class="flex items-center gap-2">
+                        <!-- 如果是 loading 状态且没有内容，显示加载动画 -->
+                        <div v-if="msg.status === 'loading' && !msg.content" class="flex items-center gap-2">
                             <span class="text-gray-500">正在生成回答...</span>
                             <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                         </div>
-                        <div v-else>{{ msg.content }}</div>
+                        <!-- 显示内容（包括流式输出中的内容） -->
+                        <div v-else class="whitespace-pre-wrap">
+                            {{ msg.content }}
+                            <!-- 打字机光标效果：只在正在流式输出时显示 -->
+                            <span v-if="isStreaming && msg.role === 'assistant' && msg.status === 'loading'"
+                                class="inline-block w-0.5 h-4 bg-gray-600 ml-0.5 animate-pulse"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -40,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import MessageInput from '@/components/MessageInput';
@@ -57,9 +64,32 @@ const conversationId = ref<number | null>(null);
 const userInput = ref('');
 const messages = ref<Message[]>([]);
 const selectedModelId = ref<number | undefined>(undefined);
+const isStreaming = ref(false); // 标记是否正在流式输出
+const messagesContainer = ref<HTMLElement | null>(null); // 消息容器引用
 
 // 从 store 获取模型配置
 const { modelConfigs } = storeToRefs(dbStore);
+
+// 自动滚动到底部
+const scrollToBottom = () => {
+    nextTick(() => {
+        if (messagesContainer.value) {
+            messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+        }
+    });
+};
+
+// 使用 nextTick 确保 DOM 更新后滚动
+const scrollToBottomSmooth = () => {
+    nextTick(() => {
+        if (messagesContainer.value) {
+            messagesContainer.value.scrollTo({
+                top: messagesContainer.value.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    });
+};
 
 // 初始化模型选择
 const initializeModelSelection = async () => {
@@ -136,8 +166,20 @@ const generateAIResponse = async (userMessage: string) => {
     });
     console.log('[AI] 创建 Loading 消息, ID:', answerId);
 
-    // 重新加载消息列表
+    // 重新加载消息列表，获取新创建的消息
     messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+
+    // 找到刚创建的消息对象（保持引用）
+    const streamingMessage = messages.value.find(m => m.id === answerId);
+
+    if (!streamingMessage) {
+        console.error('[AI] 未找到创建的消息');
+        return;
+    }
+
+    // 标记开始流式输出
+    isStreaming.value = true;    // 滚动到底部
+    scrollToBottomSmooth();
 
     try {
         // 导入 AI 服务
@@ -153,38 +195,68 @@ const generateAIResponse = async (userMessage: string) => {
             }));
 
         console.log('[AI] 开始调用 API, 模型:', modelConfig.model);
+
         let fullContent = '';
+        let updateCounter = 0;
+        const UPDATE_INTERVAL = 10; // 每10个chunk更新一次数据库
 
         // 使用流式响应
         for await (const chunk of aiService.chatStream({ messages: aiMessages, stream: true })) {
             if (!chunk.done && chunk.content) {
                 fullContent += chunk.content;
-                // 实时更新消息内容
-                await dbStore.updateMessage(answerId as number, {
-                    content: fullContent,
-                    updatedAt: new Date().toISOString()
-                });
-                // 重新加载消息以显示更新
-                messages.value = await dbStore.getMessagesByConversation(conversationId.value!);
+                updateCounter++;
+
+                // 🎯 直接修改消息对象的属性，Vue 3 会自动追踪
+                streamingMessage.content = fullContent;
+                streamingMessage.updatedAt = new Date().toISOString();
+
+                // 每次内容更新时滚动到底部
+                scrollToBottom();
+
+                // 定期更新数据库（减少频繁写入）
+                if (updateCounter % UPDATE_INTERVAL === 0) {
+                    await dbStore.updateMessage(answerId as number, {
+                        content: fullContent,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
             }
         }
 
-        // 标记为成功
+        console.log('[AI] 流式输出完成, 总字符数:', fullContent.length);
+
+        // 最终更新：标记为成功并保存完整内容到数据库
+        streamingMessage.content = fullContent;
+        streamingMessage.status = 'success';
+        streamingMessage.updatedAt = new Date().toISOString();
+
         await dbStore.updateMessage(answerId as number, {
+            content: fullContent,
             status: 'success',
             updatedAt: new Date().toISOString()
         });
-        messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+
+        // 结束流式输出
+        isStreaming.value = false;
+
         console.log('[AI] 回答生成成功');
     } catch (error) {
         console.error('[AI] 回答生成失败:', error);
+
+        // 结束流式输出
+        isStreaming.value = false;
+
+        // 更新本地消息显示错误
+        streamingMessage.content = `生成回答失败: ${error instanceof Error ? error.message : String(error)}`;
+        streamingMessage.status = 'error';
+        streamingMessage.updatedAt = new Date().toISOString();
+
         // 标记为失败
         await dbStore.updateMessage(answerId as number, {
             content: `生成回答失败: ${error instanceof Error ? error.message : String(error)}`,
             status: 'error',
             updatedAt: new Date().toISOString()
         });
-        messages.value = await dbStore.getMessagesByConversation(conversationId.value);
     }
 };
 
@@ -203,6 +275,9 @@ const loadConversation = async () => {
 
         // 加载该会话的所有消息
         messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+
+        // 滚动到底部
+        scrollToBottomSmooth();
 
         // 检查是否是新创建的会话（通过 query 参数）
         const query = route.query.q;
@@ -251,6 +326,9 @@ const handleSendMessage = async (message: string) => {
 
     // 重新加载消息
     messages.value = await dbStore.getMessagesByConversation(conversationId.value);
+
+    // 滚动到底部显示新消息
+    scrollToBottomSmooth();
 
     // 生成 AI 回答
     await generateAIResponse(message);

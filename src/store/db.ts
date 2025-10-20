@@ -2,12 +2,10 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { dbHelpers, type Message, type ModelConfig } from '../db';
 import type { ConversationProps } from '@/components/ConversationList';
-import type { ProviderProps } from '@/components/ProviderSelect';
 
 export const useDbStore = defineStore('db', () => {
     // State
     const conversations = ref<ConversationProps[]>([]);
-    const providers = ref<ProviderProps[]>([]);
     const modelConfigs = ref<ModelConfig[]>([]);
     const isLoading = ref(false);
 
@@ -64,18 +62,6 @@ export const useDbStore = defineStore('db', () => {
         }
     };
 
-    // Actions - Providers
-    const loadProviders = async () => {
-        isLoading.value = true;
-        try {
-            providers.value = await dbHelpers.getAllProviders();
-        } catch (error) {
-            console.error('加载 Providers 失败:', error);
-        } finally {
-            isLoading.value = false;
-        }
-    };
-
     // ✨ Actions - Messages（优化后的消息管理）
     const loadConversationMessages = async (conversationId: number) => {
         isLoading.value = true;
@@ -124,7 +110,6 @@ export const useDbStore = defineStore('db', () => {
     // 初始化
     const initialize = async () => {
         await loadConversations();
-        await loadProviders();
         await loadModelConfigs();
     };
 
@@ -203,7 +188,6 @@ export const useDbStore = defineStore('db', () => {
     return {
         // State
         conversations,
-        providers,
         modelConfigs,
         isLoading,
 
@@ -216,9 +200,6 @@ export const useDbStore = defineStore('db', () => {
         createConversation,
         updateConversation,
         deleteConversation,
-
-        // Provider Actions
-        loadProviders,
 
         // ✨ Message Actions（优化后）
         loadConversationMessages,

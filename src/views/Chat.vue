@@ -27,12 +27,19 @@
                             <span class="text-gray-500">正在生成回答...</span>
                             <div class="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                         </div>
-                        <!-- 显示内容（包括流式输出中的内容） -->
-                        <div v-else class="whitespace-pre-wrap">
-                            {{ msg.content }}
-                            <!-- 打字机光标效果：只在正在流式输出时显示 -->
-                            <span v-if="isStreaming && msg.role === 'assistant' && msg.status === 'loading'"
-                                class="inline-block w-0.5 h-4 bg-gray-600 ml-0.5 animate-pulse"></span>
+                        <!-- 显示内容 -->
+                        <div v-else>
+                            <!-- 用户消息：纯文本显示 -->
+                            <div v-if="msg.role === 'user'" class="whitespace-pre-wrap">
+                                {{ msg.content }}
+                            </div>
+                            <!-- AI 消息：Markdown 渲染 -->
+                            <div v-else>
+                                <MarkdownRenderer :content="msg.content" />
+                                <!-- 打字机光标效果：只在正在流式输出时显示 -->
+                                <span v-if="isStreaming && msg.status === 'loading'"
+                                    class="inline-block w-0.5 h-4 bg-gray-600 ml-0.5 animate-pulse"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -52,9 +59,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import MessageInput from '@/components/MessageInput';
 import ModelSelector from '@/components/ModelSelector';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { useDbStore } from '@/store/db';
 import { useAIStream } from '@/composables';
-import type { Message } from '@/db';
 import type { ModelConfig } from '@/types';
 
 const route = useRoute();

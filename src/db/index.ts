@@ -1,6 +1,5 @@
 import { Dexie, type Table } from 'dexie';
 import type { ConversationProps } from '@/components/ConversationList';
-import type { ProviderProps } from '@/components/ProviderSelect';
 import type { ModelConfig } from '@/types';
 
 // 消息类型
@@ -22,7 +21,6 @@ export type { ModelConfig };
 export class ChatDatabase extends Dexie {
     // 定义表
     conversations!: Table<ConversationProps>;
-    providers!: Table<ProviderProps>;
     messages!: Table<Message>;
     modelConfigs!: Table<ModelConfig>;
 
@@ -32,7 +30,6 @@ export class ChatDatabase extends Dexie {
         // 定义数据库版本和表结构
         this.version(1).stores({
             conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
-            providers: '++id, name, title, createdAt, updatedAt',
             messages: '++id, conversationId, role, type, status, createdAt',
             modelConfigs: '++id, provider, isDefault, isActive, createdAt, updatedAt'
         });
@@ -65,27 +62,6 @@ export const dbHelpers = {
         // 删除会话时也删除相关消息
         await db.messages.where('conversationId').equals(id).delete();
         return await db.conversations.delete(id);
-    },
-
-    // Providers
-    async getAllProviders() {
-        return await db.providers.toArray();
-    },
-
-    async getProvider(id: number) {
-        return await db.providers.get(id);
-    },
-
-    async addProvider(provider: Omit<ProviderProps, 'id'>) {
-        return await db.providers.add(provider as ProviderProps);
-    },
-
-    async updateProvider(id: number, changes: Partial<ProviderProps>) {
-        return await db.providers.update(id, changes);
-    },
-
-    async deleteProvider(id: number) {
-        return await db.providers.delete(id);
     },
 
     // Messages
@@ -172,7 +148,6 @@ export const dbHelpers = {
     // 工具方法
     async clearAllData() {
         await db.conversations.clear();
-        await db.providers.clear();
         await db.messages.clear();
         await db.modelConfigs.clear();
     },

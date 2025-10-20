@@ -3,9 +3,16 @@
         <!-- 聊天头部 -->
         <div class="border-b bg-white px-6 py-4">
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-gray-800">
-                    {{ conversationId ? `会话 #${conversationId}` : '新对话' }}
-                </h2>
+                <div class="flex-1 min-w-0 mr-4">
+                    <h2 class="text-xl font-semibold text-gray-800 truncate flex items-center gap-2">
+                        <Icon icon="mdi:message-text" class="text-blue-500 flex-shrink-0" />
+                        {{ currentConversation?.title || '新对话' }}
+                    </h2>
+                    <p v-if="currentConversation" class="text-sm text-gray-500 mt-1 flex items-center gap-1.5 ml-7">
+                        <Icon icon="mdi:robot-outline" class="text-base flex-shrink-0" />
+                        {{ currentConversation.selectedModel }}
+                    </p>
+                </div>
 
                 <!-- 模型选择器 -->
                 <ModelSelector v-model="selectedModelId" :configs="modelConfigs" @change="handleModelChange" />
@@ -78,6 +85,7 @@
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
+import { Icon } from '@iconify/vue';
 import MessageInput from '@/components/MessageInput';
 import ModelSelector from '@/components/ModelSelector';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
@@ -87,6 +95,7 @@ import { formatFileSize } from '@/utils/imageUtils';
 import type { ModelConfig } from '@/types';
 import type { MessageWithImage } from '@/components/MessageInput/src/types';
 import type { ImageAttachment } from '@/db';
+import type { ConversationProps } from '@/components/ConversationList';
 
 const route = useRoute();
 const router = useRouter();
@@ -96,12 +105,13 @@ const dbStore = useDbStore();
 const { isStreaming, sendStreamMessage, cancelStream } = useAIStream();
 
 const conversationId = ref<number | null>(null);
+const currentConversation = ref<ConversationProps | null>(null);
 const userInput = ref('');
 const selectedModelId = ref<number | undefined>(undefined);
 const messagesContainer = ref<HTMLElement | null>(null); // 消息容器引用
 
 // ✨ 从 store 获取响应式数据
-const { modelConfigs, currentMessages } = storeToRefs(dbStore);
+const { modelConfigs, currentMessages, conversations } = storeToRefs(dbStore);
 
 // 自动滚动到底部
 const scrollToBottom = () => {
@@ -325,6 +335,15 @@ const loadConversation = async () => {
         const hasModel = await initializeModelSelection();
         if (!hasModel) {
             return;
+        }
+
+        // ✨ 加载会话信息
+        currentConversation.value = conversations.value.find(c => c.id === conversationId.value) || null;
+
+        // 如果在 conversations 中没找到，可能是刚创建的，重新加载
+        if (!currentConversation.value) {
+            await dbStore.loadConversations();
+            currentConversation.value = conversations.value.find(c => c.id === conversationId.value) || null;
         }
 
         // ✨ 加载该会话的所有消息

@@ -88,7 +88,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import ConversationList from './components/ConversationList';
-import Toast from './components/Toast/Toast.vue';
+import Toast from './components/Toast';
 import {
     AlertDialogRoot,
     AlertDialogPortal,

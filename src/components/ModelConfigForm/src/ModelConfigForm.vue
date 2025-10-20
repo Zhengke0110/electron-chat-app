@@ -100,18 +100,24 @@ import ProviderSection from './ProviderSection.vue';
 import ModelSection from './ModelSection.vue';
 import AdvancedSection from './AdvancedSection.vue';
 import { PROVIDER_TEMPLATES } from '@/constants/providers';
+import { useModelConfigTest } from '@/composables/useModelConfigTest';
 import type { ModelConfigFormProps, ModelConfigFormEmits, FormData } from './types';
 import type { ProviderTemplate } from '@/types';
 
 const props = defineProps<ModelConfigFormProps>();
 const emit = defineEmits<ModelConfigFormEmits>();
 
+// 使用测试 Composable
+const {
+    isTesting,
+    testResult,
+    testConnection,
+    isTestable: isConfigTestable,
+    clearTestResult
+} = useModelConfigTest();
+
 // 是否编辑模式
 const isEditMode = computed(() => !!props.modelValue?.id);
-
-// 测试状态
-const isTesting = ref(false);
-const testResult = ref<{ success: boolean; message: string } | null>(null);
 
 // 表单数据
 const formData = ref<FormData>({
@@ -139,12 +145,7 @@ const isFormValid = computed(() => {
 
 // 测试连接所需的最小字段验证
 const isTestable = computed(() => {
-    return !!(
-        formData.value.provider &&
-        formData.value.baseUrl.trim() &&
-        formData.value.model.trim() &&
-        formData.value.apiKey.trim()
-    );
+    return isConfigTestable(formData.value);
 });
 
 // 监听 modelValue 变化（编辑模式）
@@ -162,7 +163,7 @@ watch(() => props.modelValue, (newValue) => {
             isActive: newValue.isActive
         };
         // 清除测试结果
-        testResult.value = null;
+        clearTestResult();
     }
 }, { immediate: true });
 
@@ -181,7 +182,7 @@ watch(() => props.isOpen, (isOpen) => {
             isActive: true
         };
         // 清除测试结果
-        testResult.value = null;
+        clearTestResult();
     }
 });
 
@@ -191,52 +192,38 @@ const handleProviderChanged = (template: ProviderTemplate) => {
     formData.value.temperature = template.defaultParams.temperature;
     formData.value.maxTokens = template.defaultParams.maxTokens;
     // 清除测试结果
-    testResult.value = null;
+    clearTestResult();
 };
 
 // 测试连接
 const handleTest = async () => {
     if (!isTestable.value || isTesting.value) return;
 
-    isTesting.value = true;
-    testResult.value = null;
+    // 如果是编辑模式且有 id,先设置测试中状态
+    if (isEditMode.value && props.modelValue?.id) {
+        const { useDbStore } = await import('@/store/db');
+        const dbStore = useDbStore();
 
-    try {
-        const testConfig = {
-            name: formData.value.name || '临时测试配置',
-            provider: formData.value.provider,
-            baseUrl: formData.value.baseUrl,
-            model: formData.value.model,
-            apiKey: formData.value.apiKey,
-            temperature: formData.value.temperature,
-            maxTokens: formData.value.maxTokens,
-            isDefault: false,
-            isActive: true
-        };
+        await dbStore.updateModelConfig(props.modelValue.id, {
+            testStatus: 'testing',
+            testMessage: undefined
+        });
+    }
 
-        // 直接调用 AI 服务进行测试,而不是通过 emit
-        const { createAIService } = await import('@/services');
-        const aiService = createAIService(testConfig as any);
-        const result = await aiService.testConnection();
+    // 调用 composable 的测试方法
+    const result = await testConnection(formData.value);
 
-        if (result.success) {
-            testResult.value = {
-                success: true,
-                message: `连接成功! 响应时间: ${result.responseTime}ms`
-            };
-        } else {
-            testResult.value = {
-                success: false,
-                message: result.error || result.message || '连接失败,请检查配置是否正确。'
-            };
-        }
-    } catch (error: any) {
-        testResult.value = {
-            success: false,
-            message: error.message || '连接失败,请检查配置是否正确。'
-        };
-    } finally {
-        isTesting.value = false;
+    // 如果是编辑模式且有 id,同步测试结果到数据库
+    if (isEditMode.value && props.modelValue?.id) {
+        const { useDbStore } = await import('@/store/db');
+        const dbStore = useDbStore();
+
+        await dbStore.updateModelConfig(props.modelValue.id, {
+            testStatus: result.success ? 'success' : 'failed',
+            testMessage: result.success
+                ? `测试成功 (${result.responseTime}ms)`
+                : (result.error || result.message)
+        });
     }
 };
 

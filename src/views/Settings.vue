@@ -45,6 +45,7 @@ import { storeToRefs } from 'pinia';
 import ModelConfigList from '@/components/ModelConfigList';
 import ModelConfigForm from '@/components/ModelConfigForm';
 import { useDbStore } from '@/store/db';
+import { modelConfigService } from '@/services/modelConfigService';
 import type { ModelConfig } from '@/types';
 
 const dbStore = useDbStore();
@@ -87,35 +88,36 @@ const handleDeleteConfig = async (id: number) => {
 
 const handleTestConfig = async (config: ModelConfig) => {
     console.log('正在测试模型配置:', config);
-    // 导入 AI 服务
-    const { createAIService } = await import('@/services');
-    const aiService = createAIService(config);
+
+    // 设置为测试中状态
+    if (config.id) {
+        await dbStore.updateModelConfig(config.id, {
+            testStatus: 'testing',
+            testMessage: undefined
+        });
+    }
 
     try {
-        const result = await aiService.testConnection();
+        // 使用 Service 层进行测试
+        const result = await modelConfigService.testConnection(config);
 
-        if (result.success) {
-            alert(`✅ ${result.message}\n响应时间: ${result.responseTime}ms`);
-            // 更新测试状态
-            if (config.id) {
-                await dbStore.updateModelConfig(config.id, {
-                    testStatus: 'success',
-                    testMessage: `测试成功 (${result.responseTime}ms)`
-                });
-            }
-        } else {
-            alert(`❌ ${result.message}\n${result.error || ''}`);
-            // 更新测试状态
-            if (config.id) {
-                await dbStore.updateModelConfig(config.id, {
-                    testStatus: 'failed',
-                    testMessage: result.error || result.message
-                });
-            }
+        // 显示测试结果
+        const message = modelConfigService.formatTestResultMessage(result);
+        alert(message);
+
+        // 更新测试状态到数据库
+        if (config.id) {
+            await dbStore.updateModelConfig(config.id, {
+                testStatus: result.success ? 'success' : 'failed',
+                testMessage: result.success
+                    ? `测试成功 (${result.responseTime}ms)`
+                    : (result.error || result.message)
+            });
         }
     } catch (error) {
         console.error('测试失败:', error);
         alert(`❌ 测试失败: ${error instanceof Error ? error.message : String(error)}`);
+
         // 更新测试状态
         if (config.id) {
             await dbStore.updateModelConfig(config.id, {

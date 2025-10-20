@@ -44,7 +44,9 @@
                             </span>
 
                             <!-- 测试状态 -->
-                            <span v-if="config.testStatus === 'success'" class="text-green-600 text-lg"
+                            <span v-if="config.testStatus === 'testing'"
+                                class="text-blue-600 text-lg animate-spin inline-block" title="测试中">⏳</span>
+                            <span v-else-if="config.testStatus === 'success'" class="text-green-600 text-lg"
                                 title="测试成功">✅</span>
                             <span v-else-if="config.testStatus === 'failed'" class="text-red-600 text-lg"
                                 title="测试失败">❌</span>

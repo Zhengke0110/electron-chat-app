@@ -10,7 +10,7 @@ export interface ModelConfig {
     maxTokens: number;             // 最大token数
     isDefault: boolean;            // 是否为默认模型
     isActive: boolean;             // 是否启用
-    testStatus?: 'success' | 'failed' | 'untested';  // 测试状态
+    testStatus?: 'success' | 'failed' | 'untested' | 'testing';  // 测试状态
     testMessage?: string;          // 测试结果信息
     createdAt: string;
     updatedAt: string;

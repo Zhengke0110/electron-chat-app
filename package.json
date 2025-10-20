@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@types/markdown-it": "^14.1.2",
+    "@vueuse/core": "^13.9.0",
     "dayjs": "^1.11.18",
     "dexie": "^4.2.1",
     "electron-squirrel-startup": "^1.0.1",

@@ -20,8 +20,11 @@
             <div v-else class="space-y-4 max-w-4xl mx-auto">
                 <div v-for="msg in currentMessages" :key="msg.id" class="flex"
                     :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
-                    <div class="max-w-[70%] px-4 py-3 rounded-lg"
-                        :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200'">
+                    <div class="px-4 py-3 rounded-lg" :class="[
+                        msg.role === 'user'
+                            ? 'bg-indigo-600 text-white max-w-[70%]'
+                            : 'bg-white border border-gray-200 w-[70%]'
+                    ]">
                         <!-- 如果是 loading 状态且没有内容，显示加载动画 -->
                         <div v-if="msg.status === 'loading' && !msg.content" class="flex items-center gap-2">
                             <span class="text-gray-500">正在生成回答...</span>

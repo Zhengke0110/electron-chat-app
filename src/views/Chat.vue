@@ -32,9 +32,26 @@
                         </div>
                         <!-- 显示内容 -->
                         <div v-else>
-                            <!-- 用户消息：纯文本显示 -->
-                            <div v-if="msg.role === 'user'" class="whitespace-pre-wrap">
-                                {{ msg.content }}
+                            <!-- 用户消息 -->
+                            <div v-if="msg.role === 'user'" class="space-y-2">
+                                <!-- 图片附件（如果有） -->
+                                <div v-if="msg.imageAttachments && msg.imageAttachments.length > 0" class="space-y-2">
+                                    <div v-for="(img, idx) in msg.imageAttachments" :key="idx"
+                                        class="relative rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm">
+                                        <img v-if="img.thumbnail || img.fileUrl" :src="img.thumbnail || img.fileUrl"
+                                            :alt="img.fileName"
+                                            class="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                            @click="handleImageClick(img)"
+                                            style="max-height: 300px; object-fit: contain;" />
+                                        <div class="text-xs text-white/80 mt-1 px-2 py-1 bg-black/20 rounded">
+                                            📎 {{ img.fileName }} ({{ formatFileSize(img.fileSize) }})
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 文本内容 -->
+                                <div class="whitespace-pre-wrap">
+                                    {{ msg.content }}
+                                </div>
                             </div>
                             <!-- AI 消息：Markdown 渲染 -->
                             <div v-else>
@@ -66,8 +83,10 @@ import ModelSelector from '@/components/ModelSelector';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import { useDbStore } from '@/store/db';
 import { useAIStream } from '@/composables';
+import { formatFileSize } from '@/utils/imageUtils';
 import type { ModelConfig } from '@/types';
 import type { MessageWithImage } from '@/components/MessageInput/src/types';
+import type { ImageAttachment } from '@/db';
 
 const route = useRoute();
 const router = useRouter();
@@ -151,6 +170,18 @@ onMounted(async () => {
 // 处理模型切换
 const handleModelChange = (config: ModelConfig) => {
     // 模型切换逻辑
+};
+
+// 处理图片点击（预览）
+const handleImageClick = (image: ImageAttachment) => {
+    console.log('🖼️ [Chat] 点击图片:', image.fileName);
+    // TODO: 可以实现图片预览弹窗
+    // 目前暂时在新窗口打开（如果有 fileUrl）
+    if (image.fileUrl) {
+        window.open(image.fileUrl, '_blank');
+    } else {
+        alert('图片预览暂不可用（已清理临时 URL）');
+    }
 };
 
 // 生成 AI 回答

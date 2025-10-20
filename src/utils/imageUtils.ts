@@ -77,6 +77,15 @@ export async function createImageAttachment(file: File): Promise<ImageAttachment
     // 获取图片尺寸
     const dimensions = await getImageDimensions(file);
 
+    // 生成缩略图（用于消息列表显示）
+    let thumbnail: string | undefined;
+    try {
+        thumbnail = await generateThumbnail(file, 300); // 生成最大 300px 的缩略图
+        console.log('✅ [imageUtils] 缩略图已生成，大小:', thumbnail.length);
+    } catch (error) {
+        console.warn('⚠️ [imageUtils] 生成缩略图失败:', error);
+    }
+
     // 创建附件对象
     const attachment: ImageAttachment = {
         id,
@@ -87,6 +96,7 @@ export async function createImageAttachment(file: File): Promise<ImageAttachment
         fileSize: file.size,
         width: dimensions.width,
         height: dimensions.height,
+        thumbnail, // Base64 缩略图
         uploadedAt: new Date().toISOString()
     };
 

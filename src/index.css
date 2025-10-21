@@ -5,8 +5,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 禁用 html 和 body 的滚动条，防止出现额外的空白区域 */
+html,
 body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
+}
+
+/* 确保根元素也占满整个视口 */
+#app {
+  height: 100%;
+  overflow: hidden;
 }

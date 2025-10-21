@@ -10,14 +10,14 @@
                     sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
                 ]">
                 <!-- 会话列表区域 -->
-                <div class="flex-1 overflow-y-auto p-2">
+                <div class="flex-1 overflow-y-auto p-1">
                     <ConversationList :items="conversations" @select="handleSelectConversation"
                         @delete="openDeleteDialog" />
                 </div>
 
                 <!-- 底部按钮区域 -->
                 <div class="border-t border-gray-300 p-3 bg-gray-100">
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-3 gap-2 mb-2">
                         <RouterLink to="/">
                             <button
                                 class="w-full px-2 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex flex-col items-center justify-center gap-1 text-xs font-medium shadow-sm">
@@ -39,6 +39,13 @@
                             <span>清空</span>
                         </button>
                     </div>
+                    <!-- 测试数据按钮 -->
+                    <button @click="handleSeedConversations"
+                        class="w-full px-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-xs font-medium shadow-sm"
+                        title="生成30条测试对话">
+                        <Icon icon="mdi:database-plus" class="text-lg" />
+                        <span>生成测试数据</span>
+                    </button>
                 </div>
             </div>
 
@@ -280,6 +287,31 @@ const handleClearDatabase = async () => {
     } catch (error) {
         console.error('[清空数据库] 失败:', error);
         alert('❌ 清空数据库失败: ' + error);
+    }
+};
+
+// 生成测试对话数据
+const handleSeedConversations = async () => {
+    const confirmed = confirm('📊 要生成 3000 条测试对话吗？\n\n这将帮助您测试滚动和展示功能。');
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        // 导入测试数据生成函数
+        const { seedConversations } = await import('./utils/seed-conversations');
+
+        // 生成 30 条测试对话
+        await seedConversations(3000);
+
+        // 重新加载会话列表
+        await dbStore.loadConversations();
+
+        alert('✅ 已成功生成 3000 条测试对话！');
+    } catch (error) {
+        console.error('[生成测试数据] 失败:', error);
+        alert('❌ 生成测试数据失败: ' + error);
     }
 };
 </script>

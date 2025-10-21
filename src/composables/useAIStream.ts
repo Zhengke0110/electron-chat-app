@@ -128,6 +128,7 @@ export function useAIStream() {
                     model: modelConfig.model,
                     temperature: modelConfig.temperature ?? 0.7,
                     maxTokens: modelConfig.maxTokens ?? 2000,
+                    systemPrompt: modelConfig.systemPrompt, // 添加系统提示词
                 },
                 messages,
             });

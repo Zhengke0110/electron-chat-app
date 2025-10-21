@@ -20,6 +20,7 @@ export interface FormData {
     apiKey: string;
     temperature: number;
     maxTokens: number;
+    systemPrompt?: string;
     isDefault: boolean;
     isActive: boolean;
 }

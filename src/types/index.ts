@@ -25,6 +25,7 @@ export interface ModelConfig {
     apiKey: string;                // API Key (存储时需加密)
     temperature: number;           // 温度参数 (0-2)
     maxTokens: number;             // 最大token数
+    systemPrompt?: string;         // 系统提示词 (可选，用于预设模型行为)
     isDefault: boolean;            // 是否为默认模型（按类型区分）
     isActive: boolean;             // 是否启用
     testStatus?: 'success' | 'failed' | 'untested' | 'testing';  // 测试状态

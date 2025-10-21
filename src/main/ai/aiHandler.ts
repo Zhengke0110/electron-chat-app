@@ -83,10 +83,15 @@ export class AIHandler {
                 dangerouslyAllowBrowser: false,
             });
 
+            // 准备消息数组：如果有系统提示词，添加到开头
+            const apiMessages = modelConfig.systemPrompt
+                ? [{ role: 'system' as const, content: modelConfig.systemPrompt }, ...messages]
+                : messages;
+
             // 开始流式调用
             const stream = await client.chat.completions.create({
                 model: modelConfig.model,
-                messages: messages,
+                messages: apiMessages,
                 temperature: modelConfig.temperature,
                 max_tokens: modelConfig.maxTokens,
                 stream: true,

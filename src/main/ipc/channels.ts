@@ -30,6 +30,7 @@ export interface ModelConfigData {
     model: string;
     temperature: number;
     maxTokens: number;
+    systemPrompt?: string; // 系统提示词（可选）
 }
 
 /**

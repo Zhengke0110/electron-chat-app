@@ -47,31 +47,8 @@ export class ChatDatabase extends Dexie {
     constructor() {
         super('ChatAppDB');
 
-        // 版本 1: 初始版本
-        this.version(1).stores({
-            conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
-            messages: '++id, conversationId, role, type, status, createdAt',
-            modelConfigs: '++id, provider, isDefault, isActive, createdAt, updatedAt'
-        });
-
-        // 版本 2: 添加 modelType 字段
-        this.version(2).stores({
-            conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
-            messages: '++id, conversationId, role, type, status, createdAt',
-            modelConfigs: '++id, provider, modelType, isDefault, isActive, createdAt, updatedAt'
-        }).upgrade(async (trans) => {
-            // 数据迁移：为现有配置添加 modelType = 'chat'
-            const configs = await trans.table('modelConfigs').toArray();
-            for (const config of configs) {
-                await trans.table('modelConfigs').update(config.id, {
-                    modelType: 'chat'
-                });
-            }
-        });
-
-        // 版本 3: 消息表添加图片附件支持
-        // 注意：Dexie 不需要为 JSON 字段添加索引，imageAttachments 和 metadata 会自动存储
-        this.version(3).stores({
+        // 版本 4: 完整的数据库结构（包含 systemPrompt 支持）
+        this.version(4).stores({
             conversations: '++id, title, selectedModel, createdAt, updatedAt, providerId',
             messages: '++id, conversationId, role, type, status, createdAt',
             modelConfigs: '++id, provider, modelType, isDefault, isActive, createdAt, updatedAt'

@@ -83,6 +83,9 @@
                         <AdvancedSection :model-value="formData" @update:temperature="formData.temperature = $event"
                             @update:max-tokens="formData.maxTokens = $event" />
 
+                        <!-- 系统提示词 -->
+                        <SystemPromptSection v-model="formData.systemPrompt" />
+
                         <!-- 按钮组 -->
                         <div class="flex items-center justify-between gap-3 pt-4 border-t">
                             <!-- 左侧测试按钮 -->
@@ -154,6 +157,7 @@ import BasicInfoSection from './BasicInfoSection.vue';
 import ProviderSection from './ProviderSection.vue';
 import ModelSection from './ModelSection.vue';
 import AdvancedSection from './AdvancedSection.vue';
+import SystemPromptSection from './SystemPromptSection.vue';
 import { PROVIDER_TEMPLATES, getProviderTemplatesByType } from '@/constants/providers';
 import { useModelConfigTest } from '@/composables/useModelConfigTest';
 import { useToast } from '@/composables';
@@ -188,6 +192,7 @@ const formData = ref<FormData>({
     apiKey: '',
     temperature: 0.7,
     maxTokens: 4000,
+    systemPrompt: undefined,
     isDefault: false,
     isActive: true
 });
@@ -220,6 +225,7 @@ watch(() => props.modelValue, (newValue) => {
             apiKey: newValue.apiKey,
             temperature: newValue.temperature,
             maxTokens: newValue.maxTokens,
+            systemPrompt: newValue.systemPrompt,
             isDefault: newValue.isDefault,
             isActive: newValue.isActive
         };
@@ -240,6 +246,7 @@ watch(() => props.isOpen, (isOpen) => {
             apiKey: '',
             temperature: 0.7,
             maxTokens: 4000,
+            systemPrompt: undefined,
             isDefault: false,
             isActive: true
         };

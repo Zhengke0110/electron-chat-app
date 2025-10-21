@@ -15,7 +15,9 @@
                 </div>
 
                 <!-- 模型选择器 -->
-                <ModelSelector v-model="selectedModelId" :configs="modelConfigs" @change="handleModelChange" />
+                <ModelSelector v-model="selectedModelId" :configs="modelConfigs" :chat-model-id="selectedChatModelId"
+                    :vision-model-id="selectedVisionModelId" :speech-model-id="selectedSpeechModelId"
+                    @change="handleModelChange" />
             </div>
         </div>
 
@@ -108,6 +110,11 @@ const userInput = ref('');
 const selectedModelId = ref<number | undefined>(undefined);
 const messagesContainer = ref<HTMLElement | null>(null); // 消息容器引用
 
+// ✨ 为不同类型的模型分别记录选中状态
+const selectedChatModelId = ref<number | undefined>(undefined);     // 对话模型
+const selectedVisionModelId = ref<number | undefined>(undefined);   // 视觉模型
+const selectedSpeechModelId = ref<number | undefined>(undefined);   // 语音模型
+
 // ✨ 从 store 获取响应式数据
 const { modelConfigs, currentMessages, conversations } = storeToRefs(dbStore);
 
@@ -134,11 +141,15 @@ const scrollToBottomSmooth = () => {
 
 // 初始化模型选择
 const initializeModelSelection = async () => {
+    console.log('🔧 [initializeModelSelection] 开始初始化模型选择');
+    console.log('📋 [initializeModelSelection] 当前 selectedModelId:', selectedModelId.value);
+
     // 加载模型配置
     await dbStore.loadModelConfigs();
 
     // 检查是否有可用的模型配置
     const activeConfigs = modelConfigs.value.filter(c => c.isActive);
+    console.log('📊 [initializeModelSelection] 可用模型数量:', activeConfigs.length);
 
     if (activeConfigs.length === 0) {
         // 没有可用模型,引导用户去配置
@@ -154,15 +165,50 @@ const initializeModelSelection = async () => {
         return false;
     }
 
-    // 如果还没有选中模型，设置默认模型
-    if (!selectedModelId.value) {
-        const defaultConfig = await dbStore.getDefaultModelConfig();
-        if (defaultConfig?.id) {
-            selectedModelId.value = defaultConfig.id;
-        } else if (activeConfigs.length > 0) {
-            // 如果没有默认模型,但有可用模型,选择第一个
-            selectedModelId.value = activeConfigs[0].id;
+    // ✅ 为每种类型的模型设置默认选中
+    // 1. 对话模型
+    if (!selectedChatModelId.value) {
+        const chatConfigs = activeConfigs.filter(c => c.modelType === 'chat');
+        const defaultChat = chatConfigs.find(c => c.isDefault) || chatConfigs[0];
+        if (defaultChat) {
+            selectedChatModelId.value = defaultChat.id;
+            console.log('✅ [initializeModelSelection] 对话模型默认:', defaultChat.name);
         }
+    }
+
+    // 2. 视觉模型
+    if (!selectedVisionModelId.value) {
+        const visionConfigs = activeConfigs.filter(c => c.modelType === 'vision');
+        const defaultVision = visionConfigs.find(c => c.isDefault) || visionConfigs[0];
+        if (defaultVision) {
+            selectedVisionModelId.value = defaultVision.id;
+            console.log('✅ [initializeModelSelection] 视觉模型默认:', defaultVision.name);
+        }
+    }
+
+    // 3. 语音模型
+    if (!selectedSpeechModelId.value) {
+        const speechConfigs = activeConfigs.filter(c => c.modelType === 'speech');
+        const defaultSpeech = speechConfigs.find(c => c.isDefault) || speechConfigs[0];
+        if (defaultSpeech) {
+            selectedSpeechModelId.value = defaultSpeech.id;
+            console.log('✅ [initializeModelSelection] 语音模型默认:', defaultSpeech.name);
+        }
+    }
+
+    // 如果还没有选中模型，使用对话模型作为当前模型
+    if (!selectedModelId.value) {
+        console.log('🎯 [initializeModelSelection] 未选中模型，尝试设置默认模型');
+        if (selectedChatModelId.value) {
+            selectedModelId.value = selectedChatModelId.value;
+            console.log('✅ [initializeModelSelection] 使用默认对话模型');
+        } else if (activeConfigs.length > 0) {
+            // 如果没有对话模型，选择第一个可用模型
+            selectedModelId.value = activeConfigs[0].id;
+            console.log('✅ [initializeModelSelection] 使用第一个可用模型:', activeConfigs[0].name);
+        }
+    } else {
+        console.log('✅ [initializeModelSelection] 已有选中的模型，保持不变:', selectedModelId.value);
     }
 
     return true;
@@ -176,8 +222,68 @@ onMounted(async () => {
 });
 
 // 处理模型切换
-const handleModelChange = (config: ModelConfig) => {
-    // 模型切换逻辑
+const handleModelChange = async (config: ModelConfig) => {
+    console.log('🔄 [handleModelChange] ============ 模型切换 ============');
+    console.log('📋 [handleModelChange] 切换前模型ID:', selectedModelId.value);
+    console.log('🎯 [handleModelChange] 切换后模型详情:', {
+        id: config.id,
+        name: config.name,
+        type: config.modelType,
+        provider: config.provider,
+        model: config.model,
+        isActive: config.isActive,
+        isDefault: config.isDefault
+    });
+
+    // 更新选中的模型 ID（v-model 已自动更新，这里确保一致性）
+    selectedModelId.value = config.id;
+
+    // ✅ 根据模型类型，分别记录选中状态
+    switch (config.modelType) {
+        case 'chat':
+            selectedChatModelId.value = config.id;
+            console.log('💬 [handleModelChange] 对话模型已切换:', config.name);
+            break;
+        case 'vision':
+            selectedVisionModelId.value = config.id;
+            console.log('👁️ [handleModelChange] 视觉模型已切换:', config.name);
+            break;
+        case 'speech':
+            selectedSpeechModelId.value = config.id;
+            console.log('🔊 [handleModelChange] 语音模型已切换:', config.name);
+            break;
+    }
+
+    // ✅ 只有对话模型才更新会话配置，视觉模型和语音模型不影响会话列表
+    if (config.modelType !== 'chat') {
+        console.log('ℹ️ [handleModelChange] 非对话模型（类型: ' + config.modelType + '），不更新会话配置');
+        return;
+    }
+
+    // 如果当前有会话，更新会话的模型配置（仅对话模型）
+    if (conversationId.value && currentConversation.value) {
+        console.log('💾 [handleModelChange] 更新会话配置:', {
+            conversationId: conversationId.value,
+            oldModel: currentConversation.value.selectedModel,
+            newModel: config.name,
+            oldProviderId: currentConversation.value.providerId,
+            newProviderId: config.id
+        });
+
+        await dbStore.updateConversation(conversationId.value, {
+            selectedModel: config.name,
+            providerId: config.id,
+            updatedAt: new Date().toISOString()
+        });
+
+        // 更新本地会话对象
+        currentConversation.value.selectedModel = config.name;
+        currentConversation.value.providerId = config.id;
+
+        console.log('✅ [handleModelChange] 会话模型已更新完成');
+    } else {
+        console.log('⚠️ [handleModelChange] 没有活动会话，仅更新选中的模型ID');
+    }
 };
 
 // 处理图片点击（预览）
@@ -205,6 +311,20 @@ const generateAIResponse = async (userMessage: string) => {
         console.error('未找到模型配置');
         return;
     }
+
+    // 🔍 日志：显示使用的模型和用户消息
+    console.log('🤖 [generateAIResponse] ============ 开始生成回答 ============');
+    console.log('📋 [generateAIResponse] 会话ID:', conversationId.value);
+    console.log('🎯 [generateAIResponse] 使用模型:', {
+        id: modelConfig.id,
+        name: modelConfig.name,
+        type: modelConfig.modelType,
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        baseUrl: modelConfig.baseUrl
+    });
+    console.log('💬 [generateAIResponse] 用户消息:', userMessage.substring(0, 200) + (userMessage.length > 200 ? '...' : ''));
+    console.log('📊 [generateAIResponse] 历史消息数量:', currentMessages.value.filter(m => m.status === 'success').length);
 
     const now = new Date().toISOString();
 
@@ -238,6 +358,12 @@ const generateAIResponse = async (userMessage: string) => {
                 content: m.content
             }));
 
+        // 🔍 日志：显示发送给AI的完整上下文
+        console.log('📨 [generateAIResponse] 发送给AI的消息上下文:');
+        aiMessages.forEach((msg, index) => {
+            console.log(`  ${index + 1}. [${msg.role}]: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`);
+        });
+
         let updateCounter = 0;
         const UPDATE_INTERVAL = 10; // 每10个chunk更新一次数据库
 
@@ -270,7 +396,10 @@ const generateAIResponse = async (userMessage: string) => {
 
                 // 流式完成
                 onDone: async ({ finishReason, totalTokens }) => {
-                    console.log('[AI] 流式输出完成, 总字符数:', streamingMessage.content.length);
+                    console.log('✅ [generateAIResponse] ============ 回答生成完成 ============');
+                    console.log('📊 [generateAIResponse] 完成原因:', finishReason);
+                    console.log('📝 [generateAIResponse] 总字符数:', streamingMessage.content.length);
+                    console.log('💬 [generateAIResponse] 回答内容预览:', streamingMessage.content.substring(0, 200) + (streamingMessage.content.length > 200 ? '...' : ''));
 
                     // 最终更新：标记为成功并保存完整内容到数据库
                     streamingMessage.status = 'success';
@@ -329,19 +458,55 @@ const loadConversation = async () => {
     if (id) {
         conversationId.value = Number(id);
 
-        // 确保模型已初始化
-        const hasModel = await initializeModelSelection();
-        if (!hasModel) {
-            return;
-        }
-
-        // ✨ 加载会话信息
+        // ✨ 先加载会话信息（在初始化模型之前）
         currentConversation.value = conversations.value.find(c => c.id === conversationId.value) || null;
 
         // 如果在 conversations 中没找到，可能是刚创建的，重新加载
         if (!currentConversation.value) {
             await dbStore.loadConversations();
             currentConversation.value = conversations.value.find(c => c.id === conversationId.value) || null;
+        }
+
+        // 🔍 日志：会话加载信息
+        console.log('📂 [loadConversation] 加载会话:', {
+            id: conversationId.value,
+            title: currentConversation.value?.title,
+            selectedModel: currentConversation.value?.selectedModel,
+            providerId: currentConversation.value?.providerId
+        });
+
+        // ✅ 优先从会话中恢复上次使用的模型（在 initializeModelSelection 之前）
+        if (currentConversation.value?.providerId) {
+            // 先确保模型配置已加载
+            if (modelConfigs.value.length === 0) {
+                await dbStore.loadModelConfigs();
+            }
+
+            // 验证该模型配置是否仍然存在且可用
+            const savedModelConfig = modelConfigs.value.find(c => c.id === currentConversation.value!.providerId);
+            if (savedModelConfig && savedModelConfig.isActive) {
+                selectedModelId.value = currentConversation.value.providerId;
+
+                // ✅ 同时更新对应类型的选中模型ID
+                if (savedModelConfig.modelType === 'chat') {
+                    selectedChatModelId.value = savedModelConfig.id;
+                }
+
+                console.log('✅ [loadConversation] 恢复会话模型:', {
+                    id: savedModelConfig.id,
+                    name: savedModelConfig.name,
+                    type: savedModelConfig.modelType
+                });
+            } else {
+                console.warn('⚠️ [loadConversation] 会话保存的模型不可用，将使用默认模型');
+                selectedModelId.value = undefined; // 重置以便 initializeModelSelection 设置默认值
+            }
+        }
+
+        // 确保模型已初始化（如果还没有选中模型）
+        const hasModel = await initializeModelSelection();
+        if (!hasModel) {
+            return;
         }
 
         // ✨ 加载该会话的所有消息
@@ -382,6 +547,16 @@ const handleSendMessage = async (message: string) => {
         alert('⚠️ 选中的模型已被禁用，请选择其他模型或前往设置页面启用');
         return;
     }
+
+    // 🔍 日志：发送消息前的状态
+    console.log('📤 [handleSendMessage] ============ 发送消息 ============');
+    console.log('🎯 [handleSendMessage] 当前使用模型:', {
+        id: selectedConfig.id,
+        name: selectedConfig.name,
+        type: selectedConfig.modelType,
+        isActive: selectedConfig.isActive
+    });
+    console.log('💬 [handleSendMessage] 消息内容:', message.substring(0, 100) + (message.length > 100 ? '...' : ''));
 
     const now = new Date().toISOString();
 

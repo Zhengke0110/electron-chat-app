@@ -200,7 +200,7 @@ import type {
     ImageUploadModalEmits,
     ImageUploadResult,
     PresetPrompt
-} from './types';
+} from '../types';
 import type { ModelConfig } from '@/types';
 
 const DEFAULT_PROMPT = '请详细描述这张图片的内容，包括主要对象、场景、颜色、位置关系等信息。';

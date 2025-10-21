@@ -54,8 +54,8 @@
 import { ref, watch, computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import { storeToRefs } from 'pinia';
-import ImageUploadModal from '../../ImageUploadModal';
-import type { ImageUploadResult } from '../../ImageUploadModal/src/types';
+import ImageUploadModal from './children/ImageUploadModal.vue';
+import type { ImageUploadResult } from './types';
 import { useDbStore } from '../../../store/db';
 import type { MessageInputProps, MessageWithImage, ImageAttachment } from './types';
 

@@ -36,11 +36,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
-
-export interface SelectOption {
-    label: string;
-    value: string;
-}
+import type { SelectOption } from '../types'
 
 interface CustomSelectProps {
     modelValue: string;

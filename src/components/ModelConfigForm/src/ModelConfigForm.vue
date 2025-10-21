@@ -158,7 +158,7 @@ import ProviderSection from './ProviderSection.vue';
 import ModelSection from './ModelSection.vue';
 import AdvancedSection from './AdvancedSection.vue';
 import SystemPromptSection from './SystemPromptSection.vue';
-import { PROVIDER_TEMPLATES, getProviderTemplatesByType } from '@/constants/providers';
+import { getProviderTemplatesByType } from '@/constants/providers';
 import { useModelConfigTest } from '@/composables/useModelConfigTest';
 import { useToast } from '@/composables';
 import type { ModelConfigFormProps, ModelConfigFormEmits, FormData } from './types';

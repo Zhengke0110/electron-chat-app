@@ -24,3 +24,9 @@ export interface FormData {
     isDefault: boolean;
     isActive: boolean;
 }
+
+
+export interface SelectOption {
+    label: string;
+    value: string;
+}

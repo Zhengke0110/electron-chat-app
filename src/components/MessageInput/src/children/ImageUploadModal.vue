@@ -118,24 +118,18 @@
 
                         <div v-if="visionOptions.length > 0"
                             class="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                            <div class="grid gap-3 md:grid-cols-2">
-                                <label class="space-y-2 text-sm">
-                                    <span class="font-medium text-gray-700">视觉模型</span>
-                                    <select v-model="selectedModelId"
-                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                                        <option v-for="option in visionOptions" :key="option.value"
-                                            :value="option.value">
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
-                                </label>
-                                <label class="space-y-2 text-sm">
-                                    <span class="font-medium text-gray-700">提示词</span>
-                                    <input v-model="prompt"
-                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                                        placeholder="请描述希望模型完成的任务" />
-                                </label>
-                            </div>
+                            <!-- 视觉模型选择 -->
+                            <label class="space-y-2 text-sm">
+                                <span class="font-medium text-gray-700">视觉模型</span>
+                                <select v-model="selectedModelId"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                                    <option v-for="option in visionOptions" :key="option.value" :value="option.value">
+                                        {{ option.label }}
+                                    </option>
+                                </select>
+                            </label>
+
+                            <!-- 提示词预设按钮 -->
                             <div class="flex flex-wrap items-center gap-2">
                                 <button v-for="preset in presetPrompts" :key="preset.value" type="button"
                                     @click="prompt = preset.value"
@@ -143,6 +137,14 @@
                                     {{ preset.label }}
                                 </button>
                             </div>
+
+                            <!-- 提示词输入 -->
+                            <label class="space-y-2 text-sm">
+                                <span class="font-medium text-gray-700">提示词</span>
+                                <input v-model="prompt"
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                    placeholder="请描述希望模型完成的任务" />
+                            </label>
 
                             <div class="flex items-center justify-between">
                                 <button type="button" @click="handleAnalyze" :disabled="isAnalyzing || !selectedConfig"

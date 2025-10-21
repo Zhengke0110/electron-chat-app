@@ -29,7 +29,7 @@
                     :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
                     <div class="px-4 py-3 rounded-lg" :class="[
                         msg.role === 'user'
-                            ? 'bg-indigo-600 text-white max-w-[70%]'
+                            ? 'bg-indigo-500 text-white max-w-[70%]'
                             : 'bg-white border border-gray-200 w-[70%]'
                     ]">
                         <!-- 如果是 loading 状态且没有内容，显示加载动画 -->

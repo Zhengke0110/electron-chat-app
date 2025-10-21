@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Icon } from '@iconify/vue';
-import CustomSelect from './children/CustomSelect.vue';
+import CustomSelect from './CustomSelect.vue';
 import type { SelectOption } from '../types';
 import { PROVIDER_TEMPLATES } from '@/constants/providers';
 import type { ProviderTemplate } from '@/types';

@@ -153,11 +153,11 @@ import {
     DialogClose
 } from 'reka-ui';
 import { Icon } from '@iconify/vue';
-import BasicInfoSection from './BasicInfoSection.vue';
-import ProviderSection from './ProviderSection.vue';
-import ModelSection from './ModelSection.vue';
-import AdvancedSection from './AdvancedSection.vue';
-import SystemPromptSection from './SystemPromptSection.vue';
+import BasicInfoSection from './children/BasicInfoSection.vue';
+import ProviderSection from './children/ProviderSection.vue';
+import ModelSection from './children/ModelSection.vue';
+import AdvancedSection from './children/AdvancedSection.vue';
+import SystemPromptSection from './children/SystemPromptSection.vue';
 import { getProviderTemplatesByType } from '@/constants/providers';
 import { useModelConfigTest } from '@/composables/useModelConfigTest';
 import { useToast } from '@/composables';

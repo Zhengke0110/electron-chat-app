@@ -61,13 +61,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Icon } from '@iconify/vue';
-import { SYSTEM_PROMPT_PRESETS } from '@/constants/prompt';
+import { getSystemPromptPresetsByType } from '@/constants/prompt';
 import type { SystemPromptPreset } from '@/constants/prompt';
+import type { ModelType } from '@/types';
 
 const props = defineProps<{
     modelValue?: string;
+    modelType: ModelType; // 必需的模型类型
 }>();
 
 const emit = defineEmits<{
@@ -76,8 +78,10 @@ const emit = defineEmits<{
 
 const showPresets = ref(false);
 
-// 使用从常量文件导入的预设
-const systemPromptPresets: SystemPromptPreset[] = SYSTEM_PROMPT_PRESETS;
+// 根据模型类型过滤预设
+const systemPromptPresets = computed<SystemPromptPreset[]>(() => {
+    return getSystemPromptPresetsByType(props.modelType);
+});
 
 const handleInput = (event: Event) => {
     const target = event.target as HTMLTextAreaElement;

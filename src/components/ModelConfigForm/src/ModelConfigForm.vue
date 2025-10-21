@@ -83,8 +83,8 @@
                         <AdvancedSection :model-value="formData" @update:temperature="formData.temperature = $event"
                             @update:max-tokens="formData.maxTokens = $event" />
 
-                        <!-- 系统提示词 -->
-                        <SystemPromptSection v-model="formData.systemPrompt" />
+                        <!-- 系统提示词（根据模型类型显示不同的预设） -->
+                        <SystemPromptSection v-model="formData.systemPrompt" :model-type="formData.modelType" />
 
                         <!-- 按钮组 -->
                         <div class="flex items-center justify-between gap-3 pt-4 border-t">

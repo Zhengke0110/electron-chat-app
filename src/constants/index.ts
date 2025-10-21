@@ -13,7 +13,9 @@ export {
 export {
     SYSTEM_PROMPT_PRESETS,
     getSystemPromptPresetByName,
-    getSystemPromptPresetNames
+    getSystemPromptPresetsByType,
+    getSystemPromptPresetNames,
+    getSystemPromptPresetNamesByType
 } from './prompt';
 
 // 导出类型

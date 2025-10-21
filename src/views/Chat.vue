@@ -55,12 +55,10 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- 文本内容 -->
-                                <div class="whitespace-pre-wrap">
-                                    {{ msg.content }}
-                                </div>
+                                <!-- 文本内容：使用 Markdown 渲染（用户消息样式） -->
+                                <MarkdownRenderer :content="msg.content" variant="user" />
                             </div>
-                            <!-- AI 消息：Markdown 渲染 -->
+                            <!-- AI 消息：Markdown 渲染（默认样式） -->
                             <div v-else>
                                 <MarkdownRenderer :content="msg.content" />
                                 <!-- 打字机光标效果：只在正在流式输出时显示 -->

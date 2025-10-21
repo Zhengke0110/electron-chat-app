@@ -1,6 +1,5 @@
 <template>
-    <div class="prose prose-sm max-w-none dark:prose-invert prose-pre:bg-gray-900 prose-pre:text-gray-100"
-        v-html="renderedHtml">
+    <div :class="proseClasses" v-html="renderedHtml">
     </div>
 </template>
 
@@ -12,9 +11,37 @@ import markdownItHighlight from 'markdown-it-highlightjs';
 import taskLists from 'markdown-it-task-lists';
 import mark from 'markdown-it-mark';
 
-const props = defineProps<{
-    content: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        content: string;
+        variant?: 'default' | 'user'; // 'default' 用于 AI 消息，'user' 用于用户消息
+    }>(),
+    {
+        variant: 'default'
+    }
+);
+
+// 根据 variant 动态生成 prose 类名
+const proseClasses = computed(() => {
+    const baseClasses = 'prose prose-sm max-w-none';
+
+    if (props.variant === 'user') {
+        // 用户消息样式：纯白色文本，适配深色背景（indigo-600）
+        return `${baseClasses} prose-invert 
+            prose-p:text-white 
+            prose-headings:text-white 
+            prose-strong:text-white 
+            prose-em:text-white 
+            prose-code:text-white prose-code:bg-white/20 
+            prose-pre:bg-white/10 prose-pre:text-white 
+            prose-a:text-blue-200 hover:prose-a:text-blue-100 prose-a:font-medium
+            prose-ul:text-white prose-ol:text-white prose-li:text-white
+            prose-blockquote:text-white prose-blockquote:border-white/30`;
+    }
+
+    // 默认样式：AI 消息，适配白色背景
+    return `${baseClasses} dark:prose-invert prose-pre:bg-gray-900 prose-pre:text-gray-100`;
+});
 
 // 创建 markdown-it 实例并配置插件
 const md = new MarkdownIt({

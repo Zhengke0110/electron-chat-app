@@ -28,8 +28,9 @@
             </button>
 
             <!-- 输入框 -->
-            <input v-model="inputValue" type="text" :placeholder="placeholder" :disabled="disabled"
-                @keyup.enter="handleCreate" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg 
+            <input ref="inputRef" v-model="inputValue" type="text" :placeholder="placeholder" :disabled="disabled"
+                @keyup.enter="handleCreate" @keydown.up.prevent="handleArrowUp" @keydown.down.prevent="handleArrowDown"
+                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg 
                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                     disabled:bg-gray-100 disabled:cursor-not-allowed
                     transition-all" />
@@ -59,10 +60,14 @@ import type { ImageUploadResult } from './types';
 import { useDbStore } from '../../../store/db';
 import type { MessageInputProps, MessageWithImage, ImageAttachment } from './types';
 
-const props = withDefaults(defineProps<MessageInputProps>(), {
+const props = withDefaults(defineProps<MessageInputProps & {
+    // 历史消息（用于上下键回溯）
+    messageHistory?: string[];
+}>(), {
     modelValue: '',
     placeholder: '输入消息...',
-    disabled: false
+    disabled: false,
+    messageHistory: () => []
 });
 
 const emit = defineEmits<{
@@ -83,8 +88,15 @@ const visionModelConfigs = computed(() => {
 // 图片上传弹窗状态
 const isImageUploadOpen = ref(false);
 
+// 输入框引用
+const inputRef = ref<HTMLInputElement | null>(null);
+
 // 内部输入值
 const inputValue = ref(props.modelValue);
+
+// 历史消息导航状态
+const historyIndex = ref(-1); // -1 表示当前输入，0+ 表示历史记录索引
+const currentDraft = ref(''); // 保存当前正在输入的草稿
 
 // 图片附件状态
 const attachedImage = ref<ImageAttachment | null>(null);
@@ -152,8 +164,56 @@ const handleCreate = () => {
         emit('create', message);
     }
 
-    // 清空输入框
+    // 清空输入框并重置历史记录索引
     inputValue.value = '';
+    historyIndex.value = -1;
+    currentDraft.value = '';
+};
+
+// 处理向上箭头键 - 回溯到更早的历史消息
+const handleArrowUp = () => {
+    if (!props.messageHistory || props.messageHistory.length === 0) {
+        return;
+    }
+
+    // 第一次按向上键时，保存当前输入的草稿
+    if (historyIndex.value === -1) {
+        currentDraft.value = inputValue.value;
+    }
+
+    // 向历史记录前进（索引增加）
+    if (historyIndex.value < props.messageHistory.length - 1) {
+        historyIndex.value++;
+        inputValue.value = props.messageHistory[historyIndex.value];
+        console.log('⬆️ [MessageInput] 回溯历史:', {
+            index: historyIndex.value,
+            total: props.messageHistory.length,
+            message: inputValue.value.substring(0, 50)
+        });
+    }
+};
+
+// 处理向下箭头键 - 回到更新的历史消息或当前输入
+const handleArrowDown = () => {
+    if (!props.messageHistory || props.messageHistory.length === 0) {
+        return;
+    }
+
+    // 向当前方向移动（索引减少）
+    if (historyIndex.value > 0) {
+        historyIndex.value--;
+        inputValue.value = props.messageHistory[historyIndex.value];
+        console.log('⬇️ [MessageInput] 前进历史:', {
+            index: historyIndex.value,
+            total: props.messageHistory.length,
+            message: inputValue.value.substring(0, 50)
+        });
+    } else if (historyIndex.value === 0) {
+        // 回到当前草稿
+        historyIndex.value = -1;
+        inputValue.value = currentDraft.value;
+        console.log('⬇️ [MessageInput] 恢复草稿:', currentDraft.value.substring(0, 50));
+    }
 };
 
 // 打开图片上传

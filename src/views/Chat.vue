@@ -8,10 +8,6 @@
                         <Icon icon="mdi:message-text" class="text-blue-500 flex-shrink-0" />
                         {{ currentConversation?.title || '新对话' }}
                     </h2>
-                    <p v-if="currentConversation" class="text-sm text-gray-500 mt-1 flex items-center gap-1.5 ml-7">
-                        <Icon icon="mdi:robot-outline" class="text-base flex-shrink-0" />
-                        {{ currentConversation.selectedModel }}
-                    </p>
                 </div>
 
                 <!-- 模型选择器 -->
@@ -75,14 +71,14 @@
 
         <!-- 消息输入区域 -->
         <div class="border-t bg-white px-6 py-4">
-            <MessageInput v-model="userInput" placeholder="输入消息..." @create="handleSendMessage"
-                @create-with-image="handleSendMessageWithImage" />
+            <MessageInput v-model="userInput" :message-history="userMessageHistory" placeholder="输入消息..."
+                @create="handleSendMessage" @create-with-image="handleSendMessageWithImage" />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { Icon } from '@iconify/vue';
@@ -117,6 +113,14 @@ const selectedSpeechModelId = ref<number | undefined>(undefined);   // 语音模
 
 // ✨ 从 store 获取响应式数据
 const { modelConfigs, currentMessages, conversations } = storeToRefs(dbStore);
+
+// ✨ 计算用户消息历史（仅用户发送的消息，按时间倒序）
+const userMessageHistory = computed(() => {
+    return currentMessages.value
+        .filter(msg => msg.role === 'user' && msg.status === 'success' && msg.content.trim())
+        .map(msg => msg.content)
+        .reverse(); // 最新的在前面
+});
 
 // 自动滚动到底部
 const scrollToBottom = () => {
